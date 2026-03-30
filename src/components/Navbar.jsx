@@ -27,9 +27,8 @@ export default function Navbar({ user }) {
 
         {/* Brand */}
         <Link to="/dashboard" className="flex items-center gap-2 shrink-0">
-          <span className="font-heading font-bold text-xl text-warm-gray-900">Life</span>
-          <span className="bg-terra-500 text-white text-xs font-semibold px-2 py-0.5 rounded-full">
-            Pulse
+          <span className="bg-terra-500 text-white text-sm font-bold italic px-3 py-1 rounded-full">
+            life pulse
           </span>
         </Link>
 
