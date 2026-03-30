@@ -2,8 +2,9 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 
 const NAV_LINKS = [
-  { label: 'Dashboard', to: '/dashboard' },
-  { label: 'New Newsletter', to: '/newsletters/new' },
+  { label: 'Dashboard',     to: '/dashboard' },
+  { label: 'Current Draft', to: '/newsletters/new' },
+  { label: 'Availability',  to: '/availability' },
 ]
 
 export default function Navbar({ user }) {
@@ -21,23 +22,29 @@ export default function Navbar({ user }) {
   }
 
   return (
-    <header className="bg-white border-b border-zinc-200 sticky top-0 z-10">
-      <div className="max-w-5xl mx-auto px-6 h-14 flex items-center gap-6">
-        <Link to="/dashboard" className="font-semibold text-zinc-900 tracking-tight shrink-0">
-          Life Pulse
+    <header className="border-b border-cream-300">
+      <div className="max-w-5xl mx-auto px-6 py-4 flex items-center gap-8">
+
+        {/* Brand */}
+        <Link to="/dashboard" className="flex items-center gap-2 shrink-0">
+          <span className="font-heading font-bold text-xl text-warm-gray-900">Life</span>
+          <span className="bg-terra-500 text-white text-xs font-semibold px-2 py-0.5 rounded-full">
+            Pulse
+          </span>
         </Link>
 
-        <nav className="flex items-center gap-1 flex-1">
+        {/* Nav links — centered */}
+        <nav className="flex items-center justify-center gap-1 flex-1">
           {NAV_LINKS.map(({ label, to }) => {
             const active = location.pathname === to
             return (
               <Link
                 key={to}
                 to={to}
-                className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
+                className={`font-body text-sm px-3 py-1.5 rounded-lg transition-colors ${
                   active
-                    ? 'bg-zinc-100 text-zinc-900 font-medium'
-                    : 'text-zinc-500 hover:text-zinc-900 hover:bg-zinc-50'
+                    ? 'bg-cream-200 text-warm-gray-900'
+                    : 'text-warm-gray-600 hover:text-warm-gray-900'
                 }`}
               >
                 {label}
@@ -46,19 +53,21 @@ export default function Navbar({ user }) {
           })}
         </nav>
 
+        {/* Right side */}
         <div className="flex items-center gap-4 shrink-0">
           {displayName && (
-            <span className="text-sm text-zinc-400 hidden sm:block truncate max-w-[160px]">
+            <span className="text-sm text-warm-gray-400 hidden sm:block truncate max-w-[160px]">
               {displayName}
             </span>
           )}
           <button
             onClick={handleSignOut}
-            className="text-sm text-zinc-500 hover:text-zinc-900 transition-colors cursor-pointer"
+            className="text-sm text-warm-gray-400 hover:text-warm-gray-600 transition-colors cursor-pointer"
           >
             Sign out
           </button>
         </div>
+
       </div>
     </header>
   )
