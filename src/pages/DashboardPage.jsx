@@ -2,20 +2,14 @@ import { useEffect, useState, useMemo } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import Navbar from '../components/Navbar'
-
-const STATUS_STYLES = {
-  draft: 'bg-gray-100 text-gray-600',
-  pending_approval: 'bg-yellow-100 text-yellow-700',
-  approved: 'bg-blue-100 text-blue-700',
-  sent: 'bg-green-100 text-green-700',
-}
+import { STATUS_STYLES } from '../lib/constants'
 
 const STATUS_FILTERS = [
-  { label: 'All', value: null },
-  { label: 'Draft', value: 'draft' },
+  { label: 'All',              value: null },
+  { label: 'Draft',            value: 'draft' },
   { label: 'Pending approval', value: 'pending_approval' },
-  { label: 'Approved', value: 'approved' },
-  { label: 'Sent', value: 'sent' },
+  { label: 'Approved',         value: 'approved' },
+  { label: 'Sent',             value: 'sent' },
 ]
 
 function formatDate(iso) {
@@ -69,20 +63,30 @@ export default function DashboardPage() {
   if (!user) return null
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-cream-100">
       <Navbar user={user} />
 
-      <main className="max-w-4xl mx-auto px-6 py-12">
+      <main className="max-w-5xl mx-auto px-6 py-10">
+        {/* Page header */}
         <div className="flex items-center justify-between mb-8">
-          <h1 className="text-2xl font-semibold text-gray-900">Your newsletters</h1>
+          <div>
+            <h1 className="text-xl font-semibold text-warm-gray-900">Your newsletters</h1>
+            <p className="text-sm text-zinc-400 mt-0.5">
+              {newsletters.length === 0
+                ? 'No newsletters yet'
+                : `${newsletters.length} newsletter${newsletters.length === 1 ? '' : 's'}`}
+            </p>
+          </div>
           <Link
             to="/newsletters/new"
-            className="bg-gray-900 hover:bg-gray-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+            className="inline-flex items-center gap-2 bg-zinc-900 hover:bg-zinc-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors shadow-sm"
           >
+            <span className="text-base leading-none">+</span>
             New Newsletter
           </Link>
         </div>
 
+        {/* Search + filters */}
         {!loading && newsletters.length > 0 && (
           <div className="space-y-3 mb-6">
             <input
@@ -90,7 +94,7 @@ export default function DashboardPage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search newsletters…"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900"
+              className="w-full bg-white border border-zinc-200 rounded-lg px-4 py-2.5 text-sm text-warm-gray-900 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-900 shadow-sm"
             />
             <div className="flex flex-wrap gap-2">
               {STATUS_FILTERS.map(({ label, value }) => (
@@ -99,8 +103,8 @@ export default function DashboardPage() {
                   onClick={() => setStatusFilter(value)}
                   className={`text-xs font-medium px-3 py-1.5 rounded-full border transition-colors cursor-pointer ${
                     statusFilter === value
-                      ? 'bg-gray-900 text-white border-gray-900'
-                      : 'bg-white text-gray-600 border-gray-300 hover:border-gray-500'
+                      ? 'bg-zinc-900 text-white border-zinc-900'
+                      : 'bg-white text-zinc-500 border-zinc-200 hover:border-zinc-400 hover:text-warm-gray-900'
                   }`}
                 >
                   {label}
@@ -110,33 +114,36 @@ export default function DashboardPage() {
           </div>
         )}
 
+        {/* List states */}
         {loading ? (
-          <p className="text-sm text-gray-400">Loading…</p>
+          <div className="py-20 text-center text-sm text-zinc-400">Loading…</div>
         ) : newsletters.length === 0 ? (
-          <div className="text-center py-20 text-gray-400">
-            <p className="text-sm">No newsletters yet.</p>
+          <div className="py-20 text-center space-y-3">
+            <p className="text-zinc-400 text-sm">You haven't created any newsletters yet.</p>
             <Link
               to="/newsletters/new"
-              className="mt-3 inline-block text-sm text-gray-900 underline underline-offset-2"
+              className="inline-block text-sm font-medium text-warm-gray-900 underline underline-offset-2"
             >
               Create your first one
             </Link>
           </div>
         ) : filtered.length === 0 ? (
-          <p className="text-sm text-gray-400 py-10 text-center">
+          <div className="py-20 text-center text-sm text-zinc-400">
             No newsletters match your search.
-          </p>
+          </div>
         ) : (
-          <ul className="space-y-3">
+          <ul className="space-y-2">
             {filtered.map((n) => (
               <li key={n.id}>
                 <Link
                   to={`/newsletters/${n.id}`}
-                  className="flex items-center justify-between bg-white border border-gray-200 rounded-lg px-5 py-4 hover:border-gray-400 transition-colors"
+                  className="flex items-center justify-between bg-white border border-zinc-200 rounded-xl px-5 py-4 hover:border-zinc-400 hover:shadow-sm transition-all group"
                 >
-                  <div className="min-w-0">
-                    <p className="font-medium text-gray-900 truncate">{n.title}</p>
-                    <p className="text-sm text-gray-500 mt-0.5">
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium text-warm-gray-900 truncate group-hover:text-zinc-700">
+                      {n.title}
+                    </p>
+                    <p className="text-sm text-zinc-400 mt-0.5">
                       {formatDate(n.period_start)} – {formatDate(n.period_end)}
                       {n.cadence && (
                         <span className="ml-2 capitalize">· {n.cadence}</span>
@@ -144,9 +151,9 @@ export default function DashboardPage() {
                     </p>
                   </div>
                   <span
-                    className={`ml-4 shrink-0 text-xs font-medium px-2.5 py-1 rounded-full capitalize ${STATUS_STYLES[n.status] ?? STATUS_STYLES.draft}`}
+                    className={`ml-4 shrink-0 text-xs font-medium px-2.5 py-1 rounded-full ${(STATUS_STYLES[n.status] ?? STATUS_STYLES.draft).bg} ${(STATUS_STYLES[n.status] ?? STATUS_STYLES.draft).text}`}
                   >
-                    {n.status.replace('_', ' ')}
+                    {(STATUS_STYLES[n.status] ?? STATUS_STYLES.draft).label}
                   </span>
                 </Link>
               </li>

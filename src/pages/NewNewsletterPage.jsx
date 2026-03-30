@@ -54,12 +54,12 @@ export default function NewNewsletterPage() {
   if (!user) return null
 
   return (
-    <div className="min-h-screen bg-zinc-50">
+    <div className="min-h-screen bg-cream-100">
       <Navbar user={user} />
 
       <main className="max-w-xl mx-auto px-6 py-12">
         <div className="mb-8">
-          <h1 className="text-xl font-semibold text-zinc-900">New Newsletter</h1>
+          <h1 className="text-xl font-semibold text-warm-gray-900">New Newsletter</h1>
           <p className="text-sm text-zinc-400 mt-1">
             Fill in the details to create a new newsletter edition.
           </p>
@@ -78,7 +78,7 @@ export default function NewNewsletterPage() {
                 onChange={handleChange}
                 required
                 placeholder="e.g. March update"
-                className="w-full border border-zinc-200 rounded-lg px-3.5 py-2.5 text-sm text-zinc-900 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-900 transition"
+                className="w-full border border-zinc-200 rounded-lg px-3.5 py-2.5 text-sm text-warm-gray-900 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-900 transition"
               />
             </div>
 
@@ -91,7 +91,7 @@ export default function NewNewsletterPage() {
                 value={form.cadence}
                 onChange={handleChange}
                 required
-                className="w-full border border-zinc-200 rounded-lg px-3.5 py-2.5 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-900 transition bg-white"
+                className="w-full border border-zinc-200 rounded-lg px-3.5 py-2.5 text-sm text-warm-gray-900 focus:outline-none focus:ring-2 focus:ring-zinc-900 transition bg-white"
               >
                 <option value="" disabled>Select cadence</option>
                 <option value="daily">Daily</option>
@@ -112,7 +112,7 @@ export default function NewNewsletterPage() {
                   value={form.period_start}
                   onChange={handleChange}
                   required
-                  className="w-full border border-zinc-200 rounded-lg px-3.5 py-2.5 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-900 transition"
+                  className="w-full border border-zinc-200 rounded-lg px-3.5 py-2.5 text-sm text-warm-gray-900 focus:outline-none focus:ring-2 focus:ring-zinc-900 transition"
                 />
               </div>
               <div>
@@ -125,7 +125,7 @@ export default function NewNewsletterPage() {
                   value={form.period_end}
                   onChange={handleChange}
                   required
-                  className="w-full border border-zinc-200 rounded-lg px-3.5 py-2.5 text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-900 transition"
+                  className="w-full border border-zinc-200 rounded-lg px-3.5 py-2.5 text-sm text-warm-gray-900 focus:outline-none focus:ring-2 focus:ring-zinc-900 transition"
                 />
               </div>
             </div>

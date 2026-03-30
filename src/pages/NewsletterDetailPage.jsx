@@ -2,13 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useParams, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import Navbar from '../components/Navbar'
-
-const STATUS_STYLES = {
-  draft: 'bg-gray-100 text-gray-600',
-  pending_approval: 'bg-yellow-100 text-yellow-700',
-  approved: 'bg-blue-100 text-blue-700',
-  sent: 'bg-green-100 text-green-700',
-}
+import { STATUS_STYLES } from '../lib/constants'
 
 function formatDate(iso) {
   if (!iso) return '—'
@@ -22,8 +16,19 @@ function formatDate(iso) {
 function Field({ label, value }) {
   return (
     <div>
-      <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">{label}</dt>
-      <dd className="mt-1 text-sm text-gray-900">{value ?? '—'}</dd>
+      <dt className="text-xs font-medium text-zinc-400 uppercase tracking-wide">{label}</dt>
+      <dd className="mt-1 text-sm text-warm-gray-900">{value ?? '—'}</dd>
+    </div>
+  )
+}
+
+function Section({ title, children }) {
+  return (
+    <div className="bg-white border border-zinc-200 rounded-2xl overflow-hidden shadow-sm">
+      <div className="px-6 py-4 border-b border-zinc-100">
+        <h2 className="text-sm font-medium text-warm-gray-900">{title}</h2>
+      </div>
+      <div className="px-6 py-5">{children}</div>
     </div>
   )
 }
@@ -118,33 +123,33 @@ export default function NewsletterDetailPage() {
   if (!user || !newsletter) return null
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-cream-100">
       <Navbar user={user} />
 
-      <main className="max-w-4xl mx-auto px-6 py-12 space-y-8">
-        {/* Title + actions */}
+      <main className="max-w-5xl mx-auto px-6 py-10 space-y-6">
+        {/* Title bar */}
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-center gap-3 min-w-0">
-            <h1 className="text-2xl font-semibold text-gray-900 truncate">
+            <h1 className="text-xl font-semibold text-warm-gray-900 truncate">
               {newsletter.title}
             </h1>
             <span
-              className={`shrink-0 text-xs font-medium px-2.5 py-1 rounded-full capitalize ${STATUS_STYLES[newsletter.status] ?? STATUS_STYLES.draft}`}
+              className={`shrink-0 text-xs font-medium px-2.5 py-1 rounded-full ${(STATUS_STYLES[newsletter.status] ?? STATUS_STYLES.draft).bg} ${(STATUS_STYLES[newsletter.status] ?? STATUS_STYLES.draft).text}`}
             >
-              {newsletter.status.replace('_', ' ')}
+              {(STATUS_STYLES[newsletter.status] ?? STATUS_STYLES.draft).label}
             </span>
           </div>
-          <div className="flex items-center gap-3 shrink-0">
+          <div className="flex items-center gap-2 shrink-0">
             <Link
               to={`/newsletters/${id}/edit`}
-              className="text-sm font-medium text-gray-700 border border-gray-300 hover:border-gray-500 px-4 py-2 rounded-lg transition-colors"
+              className="text-sm font-medium text-zinc-700 border border-zinc-200 hover:border-zinc-400 bg-white px-4 py-2 rounded-lg transition-colors shadow-sm"
             >
               Edit
             </Link>
             <button
               onClick={handleDelete}
               disabled={deleting}
-              className="text-sm font-medium text-red-600 border border-red-200 hover:border-red-400 disabled:opacity-50 px-4 py-2 rounded-lg transition-colors cursor-pointer disabled:cursor-not-allowed"
+              className="text-sm font-medium text-red-500 border border-red-100 hover:border-red-300 bg-white disabled:opacity-50 px-4 py-2 rounded-lg transition-colors cursor-pointer disabled:cursor-not-allowed shadow-sm"
             >
               {deleting ? 'Deleting…' : 'Delete'}
             </button>
@@ -152,89 +157,91 @@ export default function NewsletterDetailPage() {
         </div>
 
         {/* Metadata */}
-        <dl className="grid grid-cols-2 sm:grid-cols-4 gap-6 bg-white border border-gray-200 rounded-lg px-6 py-5">
-          <Field label="Cadence" value={newsletter.cadence ? newsletter.cadence.charAt(0).toUpperCase() + newsletter.cadence.slice(1) : null} />
-          <Field label="Period start" value={formatDate(newsletter.period_start)} />
-          <Field label="Period end" value={formatDate(newsletter.period_end)} />
-          <Field label="Sent at" value={formatDate(newsletter.sent_at)} />
-          <Field label="Created" value={formatDate(newsletter.created_at)} />
-        </dl>
+        <Section title="Details">
+          <dl className="grid grid-cols-2 sm:grid-cols-4 gap-y-5 gap-x-6">
+            <Field
+              label="Cadence"
+              value={newsletter.cadence
+                ? newsletter.cadence.charAt(0).toUpperCase() + newsletter.cadence.slice(1)
+                : null}
+            />
+            <Field label="Period start" value={formatDate(newsletter.period_start)} />
+            <Field label="Period end"   value={formatDate(newsletter.period_end)} />
+            <Field label="Sent at"      value={formatDate(newsletter.sent_at)} />
+            <Field label="Created"      value={formatDate(newsletter.created_at)} />
+          </dl>
+        </Section>
 
         {/* Content */}
-        <div className="bg-white border border-gray-200 rounded-lg px-6 py-5">
-          <h2 className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-3">
-            Content
-          </h2>
+        <Section title="Content">
           {newsletter.content ? (
-            <p className="text-sm text-gray-900 whitespace-pre-wrap leading-relaxed">
+            <p className="text-sm text-zinc-700 whitespace-pre-wrap leading-relaxed">
               {newsletter.content}
             </p>
           ) : (
-            <p className="text-sm text-gray-400 italic">
+            <p className="text-sm text-zinc-400 italic">
               No content yet — this will be filled in when the newsletter is generated.
             </p>
           )}
-        </div>
+        </Section>
 
         {/* Recipients */}
-        <div className="bg-white border border-gray-200 rounded-lg px-6 py-5 space-y-5">
-          <h2 className="text-xs font-medium text-gray-500 uppercase tracking-wide">
-            Recipients
-          </h2>
+        <Section title={`Recipients${recipients.length > 0 ? ` (${recipients.length})` : ''}`}>
+          <div className="space-y-5">
+            <form onSubmit={handleAddRecipient} className="flex flex-col sm:flex-row gap-2">
+              <input
+                type="text"
+                placeholder="Name"
+                value={recipientForm.name}
+                onChange={(e) => setRecipientForm((p) => ({ ...p, name: e.target.value }))}
+                required
+                className="flex-1 border border-zinc-200 rounded-lg px-3.5 py-2.5 text-sm text-warm-gray-900 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-900 transition"
+              />
+              <input
+                type="email"
+                placeholder="Email"
+                value={recipientForm.email}
+                onChange={(e) => setRecipientForm((p) => ({ ...p, email: e.target.value }))}
+                required
+                className="flex-1 border border-zinc-200 rounded-lg px-3.5 py-2.5 text-sm text-warm-gray-900 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-900 transition"
+              />
+              <button
+                type="submit"
+                disabled={addingRecipient}
+                className="bg-zinc-900 hover:bg-zinc-700 disabled:opacity-60 text-white text-sm font-medium px-5 py-2.5 rounded-lg transition-colors cursor-pointer disabled:cursor-not-allowed shrink-0"
+              >
+                {addingRecipient ? 'Adding…' : 'Add'}
+              </button>
+            </form>
 
-          {/* Add form */}
-          <form onSubmit={handleAddRecipient} className="flex gap-2">
-            <input
-              type="text"
-              placeholder="Name"
-              value={recipientForm.name}
-              onChange={(e) => setRecipientForm((p) => ({ ...p, name: e.target.value }))}
-              required
-              className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900"
-            />
-            <input
-              type="email"
-              placeholder="Email"
-              value={recipientForm.email}
-              onChange={(e) => setRecipientForm((p) => ({ ...p, email: e.target.value }))}
-              required
-              className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900"
-            />
-            <button
-              type="submit"
-              disabled={addingRecipient}
-              className="bg-gray-900 hover:bg-gray-700 disabled:opacity-60 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors cursor-pointer disabled:cursor-not-allowed shrink-0"
-            >
-              {addingRecipient ? 'Adding…' : 'Add'}
-            </button>
-          </form>
+            {recipientError && (
+              <p className="text-sm text-red-500 bg-red-50 px-3 py-2 rounded-lg">
+                {recipientError}
+              </p>
+            )}
 
-          {recipientError && (
-            <p className="text-sm text-red-600">{recipientError}</p>
-          )}
-
-          {/* List */}
-          {recipients.length === 0 ? (
-            <p className="text-sm text-gray-400 italic">No recipients yet.</p>
-          ) : (
-            <ul className="divide-y divide-gray-100">
-              {recipients.map((r) => (
-                <li key={r.id} className="flex items-center justify-between py-3">
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">{r.name}</p>
-                    <p className="text-sm text-gray-500">{r.email}</p>
-                  </div>
-                  <button
-                    onClick={() => handleRemoveRecipient(r.id)}
-                    className="text-xs text-red-500 hover:text-red-700 transition-colors cursor-pointer"
-                  >
-                    Remove
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+            {recipients.length === 0 ? (
+              <p className="text-sm text-zinc-400 italic">No recipients yet.</p>
+            ) : (
+              <ul className="divide-y divide-zinc-100">
+                {recipients.map((r) => (
+                  <li key={r.id} className="flex items-center justify-between py-3">
+                    <div>
+                      <p className="text-sm font-medium text-warm-gray-900">{r.name}</p>
+                      <p className="text-sm text-zinc-400">{r.email}</p>
+                    </div>
+                    <button
+                      onClick={() => handleRemoveRecipient(r.id)}
+                      className="text-xs text-zinc-400 hover:text-red-500 transition-colors cursor-pointer"
+                    >
+                      Remove
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </Section>
       </main>
     </div>
   )

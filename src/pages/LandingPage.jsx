@@ -53,11 +53,11 @@ export default function LandingPage() {
     <div className="min-h-screen bg-white flex flex-col">
       {/* Header */}
       <header className="px-6 py-5 flex items-center justify-between max-w-5xl mx-auto w-full">
-        <span className="font-semibold text-zinc-900 tracking-tight">Life Pulse</span>
+        <span className="font-semibold text-warm-gray-900 tracking-tight">Life Pulse</span>
         <button
           onClick={handleSignIn}
           disabled={signingIn}
-          className="text-sm font-medium text-zinc-600 hover:text-zinc-900 transition-colors cursor-pointer disabled:opacity-50"
+          className="text-sm font-medium text-zinc-600 hover:text-warm-gray-900 transition-colors cursor-pointer disabled:opacity-50"
         >
           Sign in
         </button>
@@ -71,7 +71,7 @@ export default function LandingPage() {
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block"></span>
               Personal newsletters, automated
             </div>
-            <h1 className="text-5xl sm:text-6xl font-bold tracking-tight text-zinc-900 leading-tight">
+            <h1 className="text-5xl sm:text-6xl font-bold tracking-tight text-warm-gray-900 leading-tight">
               Keep your family<br className="hidden sm:block" /> in the loop
             </h1>
             <p className="text-lg text-zinc-500 max-w-xl mx-auto leading-relaxed">
@@ -92,9 +92,9 @@ export default function LandingPage() {
           {/* Feature grid */}
           <div className="grid sm:grid-cols-3 gap-4 pt-8 text-left">
             {FEATURES.map(({ icon, title, description }) => (
-              <div key={title} className="bg-zinc-50 rounded-2xl p-5 space-y-2">
+              <div key={title} className="bg-cream-100 rounded-2xl p-5 space-y-2">
                 <span className="text-2xl">{icon}</span>
-                <h3 className="text-sm font-semibold text-zinc-900">{title}</h3>
+                <h3 className="text-sm font-semibold text-warm-gray-900">{title}</h3>
                 <p className="text-sm text-zinc-500 leading-relaxed">{description}</p>
               </div>
             ))}
