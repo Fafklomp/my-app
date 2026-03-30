@@ -1,22 +1,18 @@
 export const STATUS_STYLES = {
   draft: {
     label: 'Draft',
-    bg: 'bg-cream-200',
-    text: 'text-warm-gray-600',
+    className: 'bg-cream-200 text-warm-gray-600 px-3 py-1 rounded-full text-xs font-medium',
   },
   pending_approval: {
     label: 'Pending approval',
-    bg: 'bg-terra-400/20',
-    text: 'text-terra-600',
+    className: 'bg-terra-400/20 text-terra-600 px-3 py-1 rounded-full text-xs font-medium',
   },
   approved: {
     label: 'Approved',
-    bg: 'bg-sage-500/20',
-    text: 'text-sage-600',
+    className: 'bg-sage-500/20 text-sage-600 px-3 py-1 rounded-full text-xs font-medium',
   },
   sent: {
     label: 'Sent',
-    bg: 'bg-sage-500/20',
-    text: 'text-sage-600',
+    className: 'bg-sage-500/20 text-sage-600 px-3 py-1 rounded-full text-xs font-medium',
   },
 }

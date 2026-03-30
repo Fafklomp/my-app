@@ -4,6 +4,8 @@ import { supabase } from '../lib/supabase'
 import Navbar from '../components/Navbar'
 import { STATUS_STYLES } from '../lib/constants'
 
+const inputClass = 'flex-1 bg-white border border-cream-300 rounded-lg px-4 py-2.5 text-sm text-warm-gray-800 placeholder:text-warm-gray-400 focus:outline-none focus:ring-2 focus:ring-terra-500/30 focus:border-terra-500'
+
 function formatDate(iso) {
   if (!iso) return '—'
   return new Date(iso).toLocaleDateString(undefined, {
@@ -16,19 +18,19 @@ function formatDate(iso) {
 function Field({ label, value }) {
   return (
     <div>
-      <dt className="text-xs font-medium text-zinc-400 uppercase tracking-wide">{label}</dt>
-      <dd className="mt-1 text-sm text-warm-gray-900">{value ?? '—'}</dd>
+      <dt className="text-xs font-medium text-warm-gray-400 uppercase tracking-wide">{label}</dt>
+      <dd className="mt-1 text-sm text-warm-gray-800">{value ?? '—'}</dd>
     </div>
   )
 }
 
 function Section({ title, children }) {
   return (
-    <div className="bg-white border border-zinc-200 rounded-2xl overflow-hidden shadow-sm">
-      <div className="px-6 py-4 border-b border-zinc-100">
-        <h2 className="text-sm font-medium text-warm-gray-900">{title}</h2>
+    <div className="bg-white border border-cream-300 rounded-xl shadow-sm overflow-hidden">
+      <div className="px-6 py-4 border-b border-cream-300">
+        <h2 className="font-heading font-semibold text-warm-gray-800">{title}</h2>
       </div>
-      <div className="px-6 py-5">{children}</div>
+      <div className="p-6">{children}</div>
     </div>
   )
 }
@@ -122,41 +124,41 @@ export default function NewsletterDetailPage() {
 
   if (!user || !newsletter) return null
 
+  const badge = STATUS_STYLES[newsletter.status] ?? STATUS_STYLES.draft
+
   return (
     <div className="min-h-screen bg-cream-100">
       <Navbar user={user} />
 
-      <main className="max-w-5xl mx-auto px-6 py-10 space-y-6">
+      <main className="max-w-3xl mx-auto px-6 py-10 space-y-6">
         {/* Title bar */}
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-center gap-3 min-w-0">
-            <h1 className="text-xl font-semibold text-warm-gray-900 truncate">
+            <h1 className="font-heading font-semibold text-2xl text-warm-gray-900 truncate">
               {newsletter.title}
             </h1>
-            <span
-              className={`shrink-0 text-xs font-medium px-2.5 py-1 rounded-full ${(STATUS_STYLES[newsletter.status] ?? STATUS_STYLES.draft).bg} ${(STATUS_STYLES[newsletter.status] ?? STATUS_STYLES.draft).text}`}
-            >
-              {(STATUS_STYLES[newsletter.status] ?? STATUS_STYLES.draft).label}
+            <span className={`shrink-0 ${badge.className}`}>
+              {badge.label}
             </span>
           </div>
           <div className="flex items-center gap-2 shrink-0">
             <Link
               to={`/newsletters/${id}/edit`}
-              className="text-sm font-medium text-zinc-700 border border-zinc-200 hover:border-zinc-400 bg-white px-4 py-2 rounded-lg transition-colors shadow-sm"
+              className="bg-cream-200 hover:bg-cream-300 text-warm-gray-800 text-sm font-medium px-5 py-2.5 rounded-lg border border-cream-300 transition-colors"
             >
               Edit
             </Link>
             <button
               onClick={handleDelete}
               disabled={deleting}
-              className="text-sm font-medium text-red-500 border border-red-100 hover:border-red-300 bg-white disabled:opacity-50 px-4 py-2 rounded-lg transition-colors cursor-pointer disabled:cursor-not-allowed shadow-sm"
+              className="bg-red-50 hover:bg-red-100 text-red-600 text-sm font-medium px-5 py-2.5 rounded-lg border border-red-200 disabled:opacity-50 transition-colors cursor-pointer disabled:cursor-not-allowed"
             >
               {deleting ? 'Deleting…' : 'Delete'}
             </button>
           </div>
         </div>
 
-        {/* Metadata */}
+        {/* Details */}
         <Section title="Details">
           <dl className="grid grid-cols-2 sm:grid-cols-4 gap-y-5 gap-x-6">
             <Field
@@ -175,11 +177,11 @@ export default function NewsletterDetailPage() {
         {/* Content */}
         <Section title="Content">
           {newsletter.content ? (
-            <p className="text-sm text-zinc-700 whitespace-pre-wrap leading-relaxed">
+            <p className="text-sm text-warm-gray-800 whitespace-pre-wrap leading-relaxed">
               {newsletter.content}
             </p>
           ) : (
-            <p className="text-sm text-zinc-400 italic">
+            <p className="text-sm text-warm-gray-400 italic">
               No content yet — this will be filled in when the newsletter is generated.
             </p>
           )}
@@ -195,7 +197,7 @@ export default function NewsletterDetailPage() {
                 value={recipientForm.name}
                 onChange={(e) => setRecipientForm((p) => ({ ...p, name: e.target.value }))}
                 required
-                className="flex-1 border border-zinc-200 rounded-lg px-3.5 py-2.5 text-sm text-warm-gray-900 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-900 transition"
+                className={inputClass}
               />
               <input
                 type="email"
@@ -203,36 +205,36 @@ export default function NewsletterDetailPage() {
                 value={recipientForm.email}
                 onChange={(e) => setRecipientForm((p) => ({ ...p, email: e.target.value }))}
                 required
-                className="flex-1 border border-zinc-200 rounded-lg px-3.5 py-2.5 text-sm text-warm-gray-900 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-900 transition"
+                className={inputClass}
               />
               <button
                 type="submit"
                 disabled={addingRecipient}
-                className="bg-zinc-900 hover:bg-zinc-700 disabled:opacity-60 text-white text-sm font-medium px-5 py-2.5 rounded-lg transition-colors cursor-pointer disabled:cursor-not-allowed shrink-0"
+                className="bg-terra-500 hover:bg-terra-600 disabled:opacity-60 text-white text-sm font-medium px-5 py-2.5 rounded-lg transition-colors cursor-pointer disabled:cursor-not-allowed shrink-0"
               >
                 {addingRecipient ? 'Adding…' : 'Add'}
               </button>
             </form>
 
             {recipientError && (
-              <p className="text-sm text-red-500 bg-red-50 px-3 py-2 rounded-lg">
+              <p className="text-sm text-red-600 bg-red-50 px-4 py-2.5 rounded-lg border border-red-200">
                 {recipientError}
               </p>
             )}
 
             {recipients.length === 0 ? (
-              <p className="text-sm text-zinc-400 italic">No recipients yet.</p>
+              <p className="text-sm text-warm-gray-400 italic">No recipients yet.</p>
             ) : (
-              <ul className="divide-y divide-zinc-100">
+              <ul className="divide-y divide-cream-200">
                 {recipients.map((r) => (
                   <li key={r.id} className="flex items-center justify-between py-3">
                     <div>
-                      <p className="text-sm font-medium text-warm-gray-900">{r.name}</p>
-                      <p className="text-sm text-zinc-400">{r.email}</p>
+                      <p className="text-sm font-medium text-warm-gray-800">{r.name}</p>
+                      <p className="text-sm text-warm-gray-400">{r.email}</p>
                     </div>
                     <button
                       onClick={() => handleRemoveRecipient(r.id)}
-                      className="text-xs text-zinc-400 hover:text-red-500 transition-colors cursor-pointer"
+                      className="text-sm text-warm-gray-400 hover:text-terra-500 transition-colors cursor-pointer"
                     >
                       Remove
                     </button>
