@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import Navbar from '../components/Navbar'
 
 const STATUS_STYLES = {
   draft: 'bg-gray-100 text-gray-600',
@@ -30,8 +31,14 @@ function Field({ label, value }) {
 export default function NewsletterDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const [user, setUser] = useState(null)
   const [newsletter, setNewsletter] = useState(null)
   const [deleting, setDeleting] = useState(false)
+
+  const [recipients, setRecipients] = useState([])
+  const [recipientForm, setRecipientForm] = useState({ name: '', email: '' })
+  const [addingRecipient, setAddingRecipient] = useState(false)
+  const [recipientError, setRecipientError] = useState(null)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -39,7 +46,9 @@ export default function NewsletterDetailPage() {
         navigate('/', { replace: true })
         return
       }
+      setUser(session.user)
       fetchNewsletter(session.user.id)
+      fetchRecipients()
     })
   }, [id, navigate])
 
@@ -58,6 +67,16 @@ export default function NewsletterDetailPage() {
     setNewsletter(data)
   }
 
+  async function fetchRecipients() {
+    const { data } = await supabase
+      .from('recipients')
+      .select('id, name, email, created_at')
+      .eq('newsletter_id', id)
+      .order('created_at', { ascending: false })
+
+    setRecipients(data ?? [])
+  }
+
   async function handleDelete() {
     const confirmed = window.confirm(
       'Are you sure you want to delete this newsletter? This cannot be undone.'
@@ -69,19 +88,53 @@ export default function NewsletterDetailPage() {
     navigate('/dashboard', { replace: true })
   }
 
-  if (!newsletter) return null
+  async function handleAddRecipient(e) {
+    e.preventDefault()
+    setAddingRecipient(true)
+    setRecipientError(null)
+
+    const { error } = await supabase.from('recipients').insert({
+      user_id: user.id,
+      newsletter_id: id,
+      name: recipientForm.name,
+      email: recipientForm.email,
+    })
+
+    if (error) {
+      setRecipientError(error.message)
+      setAddingRecipient(false)
+    } else {
+      setRecipientForm({ name: '', email: '' })
+      setAddingRecipient(false)
+      fetchRecipients()
+    }
+  }
+
+  async function handleRemoveRecipient(recipientId) {
+    await supabase.from('recipients').delete().eq('id', recipientId)
+    setRecipients((prev) => prev.filter((r) => r.id !== recipientId))
+  }
+
+  if (!user || !newsletter) return null
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-200">
-        <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
-          <Link
-            to="/dashboard"
-            className="text-sm text-gray-500 hover:text-gray-900 transition-colors"
-          >
-            ← Dashboard
-          </Link>
-          <div className="flex items-center gap-3">
+      <Navbar user={user} />
+
+      <main className="max-w-4xl mx-auto px-6 py-12 space-y-8">
+        {/* Title + actions */}
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex items-center gap-3 min-w-0">
+            <h1 className="text-2xl font-semibold text-gray-900 truncate">
+              {newsletter.title}
+            </h1>
+            <span
+              className={`shrink-0 text-xs font-medium px-2.5 py-1 rounded-full capitalize ${STATUS_STYLES[newsletter.status] ?? STATUS_STYLES.draft}`}
+            >
+              {newsletter.status.replace('_', ' ')}
+            </span>
+          </div>
+          <div className="flex items-center gap-3 shrink-0">
             <Link
               to={`/newsletters/${id}/edit`}
               className="text-sm font-medium text-gray-700 border border-gray-300 hover:border-gray-500 px-4 py-2 rounded-lg transition-colors"
@@ -97,18 +150,8 @@ export default function NewsletterDetailPage() {
             </button>
           </div>
         </div>
-      </header>
 
-      <main className="max-w-4xl mx-auto px-6 py-12 space-y-8">
-        <div className="flex items-start justify-between gap-4">
-          <h1 className="text-2xl font-semibold text-gray-900">{newsletter.title}</h1>
-          <span
-            className={`shrink-0 text-xs font-medium px-2.5 py-1 rounded-full capitalize ${STATUS_STYLES[newsletter.status] ?? STATUS_STYLES.draft}`}
-          >
-            {newsletter.status.replace('_', ' ')}
-          </span>
-        </div>
-
+        {/* Metadata */}
         <dl className="grid grid-cols-2 sm:grid-cols-4 gap-6 bg-white border border-gray-200 rounded-lg px-6 py-5">
           <Field label="Cadence" value={newsletter.cadence ? newsletter.cadence.charAt(0).toUpperCase() + newsletter.cadence.slice(1) : null} />
           <Field label="Period start" value={formatDate(newsletter.period_start)} />
@@ -117,6 +160,7 @@ export default function NewsletterDetailPage() {
           <Field label="Created" value={formatDate(newsletter.created_at)} />
         </dl>
 
+        {/* Content */}
         <div className="bg-white border border-gray-200 rounded-lg px-6 py-5">
           <h2 className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-3">
             Content
@@ -129,6 +173,66 @@ export default function NewsletterDetailPage() {
             <p className="text-sm text-gray-400 italic">
               No content yet — this will be filled in when the newsletter is generated.
             </p>
+          )}
+        </div>
+
+        {/* Recipients */}
+        <div className="bg-white border border-gray-200 rounded-lg px-6 py-5 space-y-5">
+          <h2 className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+            Recipients
+          </h2>
+
+          {/* Add form */}
+          <form onSubmit={handleAddRecipient} className="flex gap-2">
+            <input
+              type="text"
+              placeholder="Name"
+              value={recipientForm.name}
+              onChange={(e) => setRecipientForm((p) => ({ ...p, name: e.target.value }))}
+              required
+              className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900"
+            />
+            <input
+              type="email"
+              placeholder="Email"
+              value={recipientForm.email}
+              onChange={(e) => setRecipientForm((p) => ({ ...p, email: e.target.value }))}
+              required
+              className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900"
+            />
+            <button
+              type="submit"
+              disabled={addingRecipient}
+              className="bg-gray-900 hover:bg-gray-700 disabled:opacity-60 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors cursor-pointer disabled:cursor-not-allowed shrink-0"
+            >
+              {addingRecipient ? 'Adding…' : 'Add'}
+            </button>
+          </form>
+
+          {recipientError && (
+            <p className="text-sm text-red-600">{recipientError}</p>
+          )}
+
+          {/* List */}
+          {recipients.length === 0 ? (
+            <p className="text-sm text-gray-400 italic">No recipients yet.</p>
+          ) : (
+            <ul className="divide-y divide-gray-100">
+              {recipients.map((r) => (
+                <li key={r.id} className="flex items-center justify-between py-3">
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">{r.name}</p>
+                    <p className="text-sm text-gray-500">{r.email}</p>
+                  </div>
+                  <button
+                    onClick={() => handleRemoveRecipient(r.id)}
+                    className="text-xs text-red-500 hover:text-red-700 transition-colors cursor-pointer"
+                  >
+                    Remove
+                  </button>
+                </li>
+              ))}
+            </ul>
           )}
         </div>
       </main>
