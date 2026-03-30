@@ -1,1 +1,48 @@
+@import url('https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap');
 @import "tailwindcss";
+
+@theme {
+  /* Colors — warm cream/terracotta palette */
+  --color-cream-50: #FFFDF9;
+  --color-cream-100: #FDF8F4;
+  --color-cream-200: #F5EDE4;
+  --color-cream-300: #E8DDD1;
+
+  --color-terra-400: #D4845A;
+  --color-terra-500: #C75B3B;
+  --color-terra-600: #A8492F;
+
+  --color-sage-500: #6B8F71;
+  --color-sage-600: #5A7A60;
+
+  --color-warm-gray-100: #F0ECE8;
+  --color-warm-gray-200: #D9D2CA;
+  --color-warm-gray-400: #A89F95;
+  --color-warm-gray-600: #6B6358;
+  --color-warm-gray-800: #3D3731;
+  --color-warm-gray-900: #2A2520;
+
+  /* Fonts */
+  --font-heading: 'Lora', Georgia, serif;
+  --font-body: 'Inter', system-ui, sans-serif;
+
+  /* Border radius */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+}
+
+@layer base {
+  html {
+    font-family: var(--font-body);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background-color: var(--color-cream-100);
+    color: var(--color-warm-gray-900);
+  }
+}
