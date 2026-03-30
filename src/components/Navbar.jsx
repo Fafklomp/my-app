@@ -21,9 +21,9 @@ export default function Navbar({ user }) {
   }
 
   return (
-    <header className="bg-white border-b border-gray-200">
-      <div className="max-w-4xl mx-auto px-6 py-4 flex items-center gap-8">
-        <Link to="/dashboard" className="font-semibold text-gray-900 shrink-0">
+    <header className="bg-white border-b border-zinc-200 sticky top-0 z-10">
+      <div className="max-w-5xl mx-auto px-6 h-14 flex items-center gap-6">
+        <Link to="/dashboard" className="font-semibold text-zinc-900 tracking-tight shrink-0">
           Life Pulse
         </Link>
 
@@ -34,10 +34,10 @@ export default function Navbar({ user }) {
               <Link
                 key={to}
                 to={to}
-                className={`px-3 py-1.5 rounded-md text-sm transition-colors ${
+                className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
                   active
-                    ? 'bg-gray-100 text-gray-900 font-medium'
-                    : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'
+                    ? 'bg-zinc-100 text-zinc-900 font-medium'
+                    : 'text-zinc-500 hover:text-zinc-900 hover:bg-zinc-50'
                 }`}
               >
                 {label}
@@ -48,13 +48,13 @@ export default function Navbar({ user }) {
 
         <div className="flex items-center gap-4 shrink-0">
           {displayName && (
-            <span className="text-sm text-gray-500 hidden sm:block">
+            <span className="text-sm text-zinc-400 hidden sm:block truncate max-w-[160px]">
               {displayName}
             </span>
           )}
           <button
             onClick={handleSignOut}
-            className="text-sm text-gray-500 hover:text-gray-900 transition-colors cursor-pointer"
+            className="text-sm text-zinc-500 hover:text-zinc-900 transition-colors cursor-pointer"
           >
             Sign out
           </button>

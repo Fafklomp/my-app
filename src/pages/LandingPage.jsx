@@ -2,6 +2,24 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 
+const FEATURES = [
+  {
+    icon: '📸',
+    title: 'Aggregates your moments',
+    description: 'Pulls photos and activity from your connected accounts automatically.',
+  },
+  {
+    icon: '✍️',
+    title: 'AI writes the story',
+    description: 'Generates a warm, readable newsletter from your recent highlights.',
+  },
+  {
+    icon: '✅',
+    title: 'You approve before it sends',
+    description: 'Nothing goes out without your sign-off. Your story, your control.',
+  },
+]
+
 export default function LandingPage() {
   const navigate = useNavigate()
   const [loading, setLoading] = useState(true)
@@ -32,39 +50,69 @@ export default function LandingPage() {
   if (loading) return null
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-white px-4">
-      <div className="max-w-md w-full text-center space-y-6">
-        <div className="space-y-2">
-          <h1 className="text-4xl font-bold tracking-tight text-gray-900">
-            Life Pulse
-          </h1>
-          <p className="text-gray-500 text-lg">
-            Automatically turn your photos and moments into a personal newsletter
-            — so the people who matter stay in the loop.
-          </p>
-        </div>
-
+    <div className="min-h-screen bg-white flex flex-col">
+      {/* Header */}
+      <header className="px-6 py-5 flex items-center justify-between max-w-5xl mx-auto w-full">
+        <span className="font-semibold text-zinc-900 tracking-tight">Life Pulse</span>
         <button
           onClick={handleSignIn}
           disabled={signingIn}
-          className="inline-flex items-center gap-3 bg-gray-900 hover:bg-gray-700 disabled:opacity-60 text-white text-sm font-medium px-6 py-3 rounded-lg transition-colors cursor-pointer disabled:cursor-not-allowed"
+          className="text-sm font-medium text-zinc-600 hover:text-zinc-900 transition-colors cursor-pointer disabled:opacity-50"
         >
-          <GitHubIcon />
-          {signingIn ? 'Redirecting…' : 'Sign in with GitHub'}
+          Sign in
         </button>
-      </div>
+      </header>
+
+      {/* Hero */}
+      <main className="flex-1 flex flex-col items-center justify-center px-6 py-20 text-center">
+        <div className="max-w-2xl mx-auto space-y-8">
+          <div className="space-y-4">
+            <div className="inline-flex items-center gap-2 bg-zinc-100 text-zinc-600 text-xs font-medium px-3 py-1.5 rounded-full">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block"></span>
+              Personal newsletters, automated
+            </div>
+            <h1 className="text-5xl sm:text-6xl font-bold tracking-tight text-zinc-900 leading-tight">
+              Keep your family<br className="hidden sm:block" /> in the loop
+            </h1>
+            <p className="text-lg text-zinc-500 max-w-xl mx-auto leading-relaxed">
+              Life Pulse turns your photos and daily moments into a beautiful newsletter —
+              so the people who matter always know what you've been up to.
+            </p>
+          </div>
+
+          <button
+            onClick={handleSignIn}
+            disabled={signingIn}
+            className="inline-flex items-center gap-3 bg-zinc-900 hover:bg-zinc-700 disabled:opacity-60 text-white font-medium px-7 py-3.5 rounded-xl transition-colors cursor-pointer disabled:cursor-not-allowed shadow-sm text-sm"
+          >
+            <GitHubIcon />
+            {signingIn ? 'Redirecting…' : 'Continue with GitHub'}
+          </button>
+
+          {/* Feature grid */}
+          <div className="grid sm:grid-cols-3 gap-4 pt-8 text-left">
+            {FEATURES.map(({ icon, title, description }) => (
+              <div key={title} className="bg-zinc-50 rounded-2xl p-5 space-y-2">
+                <span className="text-2xl">{icon}</span>
+                <h3 className="text-sm font-semibold text-zinc-900">{title}</h3>
+                <p className="text-sm text-zinc-500 leading-relaxed">{description}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </main>
+
+      {/* Footer */}
+      <footer className="px-6 py-6 text-center text-xs text-zinc-400">
+        Private beta · Your data is only ever shared with people you choose
+      </footer>
     </div>
   )
 }
 
 function GitHubIcon() {
   return (
-    <svg
-      className="w-5 h-5"
-      fill="currentColor"
-      viewBox="0 0 24 24"
-      aria-hidden="true"
-    >
+    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
       <path
         fillRule="evenodd"
         clipRule="evenodd"
