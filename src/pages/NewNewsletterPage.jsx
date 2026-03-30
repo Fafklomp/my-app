@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import Navbar from '../components/Navbar'
 
 export default function NewNewsletterPage() {
   const navigate = useNavigate()
@@ -54,17 +55,7 @@ export default function NewNewsletterPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-200">
-        <div className="max-w-2xl mx-auto px-6 py-4 flex items-center justify-between">
-          <span className="font-semibold text-gray-900">Life Pulse</span>
-          <button
-            onClick={() => navigate('/dashboard')}
-            className="text-sm text-gray-500 hover:text-gray-900 transition-colors cursor-pointer"
-          >
-            Cancel
-          </button>
-        </div>
-      </header>
+      <Navbar user={user} />
 
       <main className="max-w-2xl mx-auto px-6 py-12">
         <h1 className="text-2xl font-semibold text-gray-900 mb-8">
