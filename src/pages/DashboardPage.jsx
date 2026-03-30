@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import Navbar from '../components/Navbar'
 
 const STATUS_STYLES = {
   draft: 'bg-gray-100 text-gray-600',
@@ -8,6 +9,14 @@ const STATUS_STYLES = {
   approved: 'bg-blue-100 text-blue-700',
   sent: 'bg-green-100 text-green-700',
 }
+
+const STATUS_FILTERS = [
+  { label: 'All', value: null },
+  { label: 'Draft', value: 'draft' },
+  { label: 'Pending approval', value: 'pending_approval' },
+  { label: 'Approved', value: 'approved' },
+  { label: 'Sent', value: 'sent' },
+]
 
 function formatDate(iso) {
   if (!iso) return '—'
@@ -23,6 +32,8 @@ export default function DashboardPage() {
   const [user, setUser] = useState(null)
   const [newsletters, setNewsletters] = useState([])
   const [loading, setLoading] = useState(true)
+  const [search, setSearch] = useState('')
+  const [statusFilter, setStatusFilter] = useState(null)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -46,40 +57,24 @@ export default function DashboardPage() {
     setLoading(false)
   }
 
-  async function handleSignOut() {
-    await supabase.auth.signOut()
-    navigate('/', { replace: true })
-  }
+  const filtered = useMemo(() => {
+    const term = search.trim().toLowerCase()
+    return newsletters.filter((n) => {
+      const matchesSearch = !term || n.title.toLowerCase().includes(term)
+      const matchesStatus = !statusFilter || n.status === statusFilter
+      return matchesSearch && matchesStatus
+    })
+  }, [newsletters, search, statusFilter])
 
   if (!user) return null
 
-  const displayName =
-    user.user_metadata?.full_name ||
-    user.user_metadata?.user_name ||
-    user.email
-
   return (
     <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-200">
-        <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
-          <span className="font-semibold text-gray-900">Life Pulse</span>
-          <button
-            onClick={handleSignOut}
-            className="text-sm text-gray-500 hover:text-gray-900 transition-colors cursor-pointer"
-          >
-            Sign out
-          </button>
-        </div>
-      </header>
+      <Navbar user={user} />
 
       <main className="max-w-4xl mx-auto px-6 py-12">
         <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-2xl font-semibold text-gray-900">
-              Welcome back, {displayName}
-            </h1>
-            <p className="mt-1 text-gray-500">Your newsletters</p>
-          </div>
+          <h1 className="text-2xl font-semibold text-gray-900">Your newsletters</h1>
           <Link
             to="/newsletters/new"
             className="bg-gray-900 hover:bg-gray-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
@@ -87,6 +82,33 @@ export default function DashboardPage() {
             New Newsletter
           </Link>
         </div>
+
+        {!loading && newsletters.length > 0 && (
+          <div className="space-y-3 mb-6">
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search newsletters…"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900"
+            />
+            <div className="flex flex-wrap gap-2">
+              {STATUS_FILTERS.map(({ label, value }) => (
+                <button
+                  key={label}
+                  onClick={() => setStatusFilter(value)}
+                  className={`text-xs font-medium px-3 py-1.5 rounded-full border transition-colors cursor-pointer ${
+                    statusFilter === value
+                      ? 'bg-gray-900 text-white border-gray-900'
+                      : 'bg-white text-gray-600 border-gray-300 hover:border-gray-500'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {loading ? (
           <p className="text-sm text-gray-400">Loading…</p>
@@ -100,9 +122,13 @@ export default function DashboardPage() {
               Create your first one
             </Link>
           </div>
+        ) : filtered.length === 0 ? (
+          <p className="text-sm text-gray-400 py-10 text-center">
+            No newsletters match your search.
+          </p>
         ) : (
           <ul className="space-y-3">
-            {newsletters.map((n) => (
+            {filtered.map((n) => (
               <li key={n.id}>
                 <Link
                   to={`/newsletters/${n.id}`}
