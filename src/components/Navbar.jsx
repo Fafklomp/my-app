@@ -2,9 +2,9 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 
 const NAV_LINKS = [
-  { label: 'Dashboard',     to: '/dashboard' },
-  { label: 'Current Draft', to: '/newsletters/new' },
-  { label: 'Availability',  to: '/availability' },
+  { label: 'Dashboard',    to: '/dashboard' },
+  { label: 'Audiences',    to: '/audiences' },
+  { label: 'Availability', to: '/availability' },
 ]
 
 export default function Navbar({ user }) {
