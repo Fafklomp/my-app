@@ -9,6 +9,9 @@ import Lightbox from '../components/Lightbox'
 import ConnectGoogle from '../components/ConnectGoogle'
 import MiniCalendar from '../components/MiniCalendar'
 import PhotoCurator from '../components/PhotoCurator'
+import SpotifyMonthlyMusic from '../components/SpotifyMonthlyMusic'
+import ContentCards from '../components/ContentCards'
+import ComingUpNext from '../components/ComingUpNext'
 
 const BUCKET         = 'newsletter-photos'
 const SIGNED_URL_TTL = 3600
@@ -46,11 +49,16 @@ export default function NewsletterDetailPage() {
   const [regenError, setRegenError]             = useState(null)
   const [captioning, setCaptioning]             = useState(false)
   const [captionRefreshKey, setCaptionRefreshKey] = useState(0)
-  // Calendar + Google Photos
+  // Calendar + Google Photos + Spotify
   const [googleConnected, setGoogleConnected]       = useState(false)
   const [googlePhotosEnabled, setGooglePhotosEnabled] = useState(false)
+  const [spotifyConnected, setSpotifyConnected]     = useState(false)
   const [calendarEvents, setCalendarEvents]         = useState([])
   const [syncingCalendar, setSyncingCalendar]       = useState(false)
+  // Content cards
+  const [manualContent, setManualContent]           = useState({})
+  const [extractionResult, setExtractionResult]     = useState(null)
+  const [comingUpNext, setComingUpNext]             = useState([])
   // Send flow
   const [memberCounts, setMemberCounts]             = useState({})
   const [sendModal, setSendModal]                   = useState(false)
@@ -58,6 +66,9 @@ export default function NewsletterDetailPage() {
   const [sending, setSending]                       = useState(false)
   const [sendProgressMsg, setSendProgressMsg]       = useState('')
   const [sendToast, setSendToast]                   = useState(null)
+  // Reset flow
+  const [resetModal, setResetModal]                 = useState(false)
+  const [resetting, setResetting]                   = useState(false)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -76,7 +87,7 @@ export default function NewsletterDetailPage() {
     ] = await Promise.all([
       supabase
         .from('newsletters')
-        .select('id, title, status, period_start, period_end, voice_input')
+        .select('id, title, status, period_start, period_end, voice_input, manual_content, coming_up_next')
         .eq('id', id)
         .eq('user_id', userId)
         .single(),
@@ -98,6 +109,8 @@ export default function NewsletterDetailPage() {
     if (!newsletterData) { navigate('/dashboard', { replace: true }); return }
 
     setNewsletter(newsletterData)
+    setManualContent(newsletterData.manual_content ?? {})
+    setComingUpNext(newsletterData.coming_up_next ?? [])
     setAudienceLists(audienceData ?? [])
     setVersions(versionData ?? [])
     await loadAllPhotos(versionData ?? [])
@@ -117,13 +130,14 @@ export default function NewsletterDetailPage() {
         .order('start_time', { ascending: true }),
       supabase
         .from('user_oauth_tokens')
-        .select('google_access_token, google_photos_access_token')
+        .select('google_access_token, google_photos_access_token, spotify_access_token')
         .eq('user_id', userId)
         .maybeSingle(),
     ])
     setCalendarEvents(evData ?? [])
     setGoogleConnected(!!tokenRow?.google_access_token)
     setGooglePhotosEnabled(!!tokenRow?.google_photos_access_token)
+    setSpotifyConnected(!!tokenRow?.spotify_access_token)
   }
 
   // Fetch + sign all photos for every version of this newsletter
@@ -301,6 +315,18 @@ export default function NewsletterDetailPage() {
     setSyncingCalendar(false)
   }
 
+  // ── Extract content from voice/text note ──
+  async function handleExtract(text) {
+    const { data, error } = await supabase.functions.invoke('extract-content', {
+      body: { transcript: text },
+    })
+    if (error || data?.error) {
+      console.error('extract-content error:', error || data?.error)
+      return
+    }
+    setExtractionResult(data)
+  }
+
   // ── Generate captions via Edge Function ──
   async function handleGenerateCaptions(versionId) {
     setCaptioning(true)
@@ -371,6 +397,44 @@ export default function NewsletterDetailPage() {
       console.error('Send errors:', errs)
     }
     setTimeout(() => setSendToast(null), 5000)
+  }
+
+  // ── Reset newsletter ──
+  async function handleReset() {
+    setResetting(true)
+
+    const vIds = versions.map((v) => v.id)
+    if (vIds.length > 0) {
+      // Delete storage files
+      const { data: photos } = await supabase
+        .from('newsletter_photos')
+        .select('storage_path')
+        .in('newsletter_version_id', vIds)
+      const paths = (photos ?? []).map((p) => p.storage_path).filter(Boolean)
+      if (paths.length > 0) await supabase.storage.from(BUCKET).remove(paths)
+
+      // Delete DB rows
+      await supabase.from('newsletter_photos').delete().in('newsletter_version_id', vIds)
+      await supabase.from('newsletter_versions').delete().eq('newsletter_id', id)
+    }
+
+    // Reset newsletter fields
+    await supabase
+      .from('newsletters')
+      .update({ voice_input: null, manual_content: {}, coming_up_next: [], status: 'draft' })
+      .eq('id', id)
+
+    // Reset local state
+    setVersions([])
+    setAllPhotos([])
+    setNewsletter((prev) => ({ ...prev, voice_input: null, manual_content: {}, coming_up_next: [], status: 'draft' }))
+    setManualContent({})
+    setComingUpNext([])
+    setVoiceInputExpanded(false)
+    setActiveTab('all')
+    setEditingId(null)
+    setResetModal(false)
+    setResetting(false)
   }
 
   if (!user || !newsletter) return null
@@ -456,6 +520,13 @@ export default function NewsletterDetailPage() {
                   {regenerating ? 'Generating…' : 'Regenerate Summary'}
                 </button>
               )}
+              <button
+                onClick={() => setResetModal(true)}
+                className="text-warm-gray-400 hover:text-red-500 text-sm font-medium px-3 py-2.5 rounded-lg transition-colors cursor-pointer"
+                title="Reset newsletter"
+              >
+                Reset
+              </button>
             </div>
           </div>
         </div>
@@ -489,8 +560,30 @@ export default function NewsletterDetailPage() {
               setNewsletter((prev) => ({ ...prev, voice_input: text }))
               setVoiceInputExpanded(false)
             }}
+            onExtract={handleExtract}
           />
         )}
+
+        {/* ── What's On My Radar ── */}
+        {(newsletter.voice_input || Object.values(manualContent).some(v => v?.title)) && (
+          <div>
+            <h2 className="font-heading font-semibold text-warm-gray-800 mb-3">What's On My Radar</h2>
+            <ContentCards
+              newsletterId={id}
+              initialData={manualContent}
+              extractionResult={extractionResult}
+              onUpdate={(next) => setManualContent(next)}
+            />
+          </div>
+        )}
+
+        {/* ── Coming Up Next Month ── */}
+        <ComingUpNext
+          newsletterId={id}
+          newsletterMonth={newsletter.period_start.slice(0, 7)}
+          initialData={comingUpNext}
+          onUpdate={(next) => setComingUpNext(next)}
+        />
 
         {/* ── Audience tabs ── */}
         <div>
@@ -741,6 +834,19 @@ export default function NewsletterDetailPage() {
                   </div>
                 </div>
 
+                {/* Music card */}
+                <div className="bg-white border border-cream-300 rounded-xl shadow-sm overflow-hidden">
+                  <div className="px-6 py-4 border-b border-cream-300">
+                    <h2 className="font-heading font-semibold text-warm-gray-800">What I've Been Listening To</h2>
+                  </div>
+                  <div className="p-6">
+                    <SpotifyMonthlyMusic
+                      month={newsletter.period_start.slice(0, 7)}
+                      spotifyConnected={spotifyConnected}
+                    />
+                  </div>
+                </div>
+
                 {/* Events card — mini calendar */}
                 <div className="bg-white border border-cream-300 rounded-xl shadow-sm overflow-hidden">
                   <div className="px-6 py-4 border-b border-cream-300">
@@ -868,6 +974,43 @@ export default function NewsletterDetailPage() {
       {sendToast && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-warm-gray-900 text-white text-sm font-medium px-5 py-3 rounded-full shadow-xl whitespace-nowrap">
           {sendToast}
+        </div>
+      )}
+
+      {/* ── Reset confirmation modal ── */}
+      {resetModal && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
+            <div className="px-6 pt-6 pb-5 border-b border-cream-200">
+              <h2 className="font-heading text-xl font-bold text-warm-gray-900">Reset Newsletter?</h2>
+              <p className="text-sm text-warm-gray-500 mt-2">
+                This will clear your voice input, all content cards, all photos, and all generated drafts.
+                The newsletter period and title are kept. This can't be undone.
+              </p>
+            </div>
+            <div className="px-6 py-4 flex items-center justify-end gap-3">
+              <button
+                onClick={() => setResetModal(false)}
+                disabled={resetting}
+                className="text-sm text-warm-gray-400 hover:text-warm-gray-600 transition-colors cursor-pointer disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleReset}
+                disabled={resetting}
+                className="bg-red-500 hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium px-5 py-2.5 rounded-lg transition-colors cursor-pointer flex items-center gap-2"
+              >
+                {resetting && (
+                  <svg className="w-3.5 h-3.5 animate-spin shrink-0" viewBox="0 0 24 24" fill="none">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+                  </svg>
+                )}
+                {resetting ? 'Resetting…' : 'Yes, Reset'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

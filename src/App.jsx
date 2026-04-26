@@ -7,6 +7,7 @@ import AudiencesPage from './pages/AudiencesPage'
 import PublishedUpdatePage from './pages/PublishedUpdatePage'
 import AvailabilityPage from './pages/AvailabilityPage'
 import GooglePhotosCallback from './pages/GooglePhotosCallback'
+import SpotifyCallbackPage from './pages/SpotifyCallbackPage'
 
 export default function App() {
   return (
@@ -20,6 +21,7 @@ export default function App() {
         <Route path="/update/:versionId" element={<PublishedUpdatePage />} />
         <Route path="/availability" element={<AvailabilityPage />} />
         <Route path="/auth/google-photos/callback" element={<GooglePhotosCallback />} />
+        <Route path="/callbacks/spotify" element={<SpotifyCallbackPage />} />
       </Routes>
     </BrowserRouter>
   )

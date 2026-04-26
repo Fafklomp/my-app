@@ -44,16 +44,17 @@ const textareaClass =
 
 // ── Component ─────────────────────────────────────────────────
 
-export default function VoiceRecorder({ newsletterId, initialValue, onSaved }) {
+export default function VoiceRecorder({ newsletterId, initialValue, onSaved, onExtract }) {
   // 'idle' | 'recording' | 'completed'
-  const [state,     setState]     = useState('idle')
-  const [text,      setText]      = useState(initialValue ?? '')
-  const [elapsed,   setElapsed]   = useState(0)   // live counter during recording
-  const [duration,  setDuration]  = useState(0)   // frozen when stopped
-  const [audioUrl,  setAudioUrl]  = useState(null)
-  const [isPlaying, setIsPlaying] = useState(false)
-  const [micError,  setMicError]  = useState(null)
-  const [saving,    setSaving]    = useState(false)
+  const [state,      setState]     = useState('idle')
+  const [text,       setText]      = useState(initialValue ?? '')
+  const [elapsed,    setElapsed]   = useState(0)   // live counter during recording
+  const [duration,   setDuration]  = useState(0)   // frozen when stopped
+  const [audioUrl,   setAudioUrl]  = useState(null)
+  const [isPlaying,  setIsPlaying] = useState(false)
+  const [micError,   setMicError]  = useState(null)
+  const [saving,     setSaving]    = useState(false)
+  const [extracting, setExtracting] = useState(false)
 
   // API support flags — set once on mount
   const [hasMedia,  setHasMedia]  = useState(true)
@@ -191,6 +192,16 @@ export default function VoiceRecorder({ newsletterId, initialValue, onSaved }) {
 
   const canSave = text.trim().length > 0
 
+  async function handleExtract() {
+    if (!onExtract || !canSave || extracting) return
+    setExtracting(true)
+    try {
+      await onExtract(text)
+    } finally {
+      setExtracting(false)
+    }
+  }
+
   return (
     <div className="bg-white border border-cream-300 rounded-xl p-6 space-y-5">
 
@@ -300,12 +311,29 @@ export default function VoiceRecorder({ newsletterId, initialValue, onSaved }) {
         />
       </div>
 
-      {/* ── Save button ── */}
-      <div className="flex justify-end">
+      {/* ── Actions ── */}
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        {onExtract && canSave && (
+          <button
+            onClick={handleExtract}
+            disabled={extracting || saving}
+            className="text-terra-500 hover:text-terra-600 disabled:opacity-50 text-sm font-medium transition-colors cursor-pointer disabled:cursor-not-allowed flex items-center gap-1.5"
+          >
+            {extracting ? (
+              <>
+                <svg className="w-3.5 h-3.5 animate-spin shrink-0" viewBox="0 0 24 24" fill="none">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+                </svg>
+                Extracting…
+              </>
+            ) : '✨ Extract content'}
+          </button>
+        )}
         <button
           onClick={handleSave}
           disabled={saving || !canSave}
-          className="bg-terra-500 hover:bg-terra-600 disabled:opacity-50 text-white text-sm font-medium px-5 py-2.5 rounded-lg transition-colors cursor-pointer disabled:cursor-not-allowed"
+          className="ml-auto bg-terra-500 hover:bg-terra-600 disabled:opacity-50 text-white text-sm font-medium px-5 py-2.5 rounded-lg transition-colors cursor-pointer disabled:cursor-not-allowed"
         >
           {saving ? 'Saving…' : 'Use as Input'}
         </button>

@@ -197,37 +197,79 @@ Use these photos as context to enrich the summary. If a photo shows a dinner, hi
       return json({ error: "NO_INPUT" }, 422)
     }
 
+    // ── Build manual_content context block ────────────────────
+    const mc = newsletter.manual_content ?? {}
+    const radarItems: string[] = []
+    if (mc.reading?.title)        radarItems.push(`Reading: "${mc.reading.title}"${mc.reading.note ? ` — ${mc.reading.note}` : ""}`)
+    if (mc.watching?.title)       radarItems.push(`Watching: "${mc.watching.title}"${mc.watching.note ? ` — ${mc.watching.note}` : ""}`)
+    if (mc.recommendation?.title) radarItems.push(`Recommendation: "${mc.recommendation.title}"${mc.recommendation.note ? ` — ${mc.recommendation.note}` : ""}`)
+    if (mc.hot_take?.title)       radarItems.push(`Hot take: "${mc.hot_take.title}"${mc.hot_take.note ? ` — ${mc.hot_take.note}` : ""}`)
+    const radarBlock = radarItems.length > 0
+      ? `WHAT'S ON THE USER'S RADAR THIS MONTH (weave these naturally into the summary where relevant):\n${radarItems.join("\n")}`
+      : ""
+
+    // ── Build coming_up_next context block ────────────────────
+    const includedUpcoming = (newsletter.coming_up_next ?? []).filter((item: any) => item.included && item.title)
+    const comingUpBlock = includedUpcoming.length > 0
+      ? `COMING UP NEXT MONTH (you can reference these as upcoming plans if it fits naturally — "Next month I'm looking forward to…"):\n${includedUpcoming.map((item: any) => `- ${item.title} (${item.date})`).join("\n")}`
+      : ""
+
     // ── Build prompt ──────────────────────────────────────────
-    const userName  = user.user_metadata?.full_name || user.user_metadata?.user_name || "the user"
     const month     = new Date(newsletter.period_start).toLocaleString("en-US", { month: "long", year: "numeric" })
-    const toneGuide = audience.description?.trim() || "Friendly and natural -- write as a warm personal update."
+    const toneGuide = audience.description?.trim() || "Friendly and natural - write as a warm personal update."
 
-    const prompt = `You are a personal newsletter ghostwriter for ${userName}.
+    const systemPrompt = `You are writing as Francois. Here is his voice profile - match this style closely:
 
-IMPORTANT STYLE INSTRUCTION: Write in the same casual, natural voice as the user's raw input below. Mirror their slang, sentence rhythm, and personality. If they say 'bru' or 'lekker' or 'hectic', use those words. If they write in short punchy sentences, do the same. Do not polish their voice into generic newsletter language -- keep it authentically them. The newsletter should sound like the user talking to their friends, not a copywriter.
+VOICE CHARACTERISTICS:
+- Warm and direct. Lead with honesty but wrap it in care.
+- Structured thinker. Organize thoughts clearly, sometimes using numbered points.
+- Emotionally intelligent. Name feelings openly without being dramatic.
+- Optimistic realist. Acknowledge hard truths but frame them with hope.
+- South African warmth. Approachable, never cold or corporate.
 
-Read the user's raw input carefully and match their tone, vocabulary, and energy level. If they sound excited, be excited. If they're chill, be chill.
+WRITING PATTERNS:
+- Mix short punchy sentences with longer flowing ones.
+- Uses 'I know' and 'just' naturally to soften directness.
+- Addresses people warmly, uses first names.
+- Not afraid of vulnerability but balances it with practicality.
+- Uses humor to lighten things up when appropriate.
+- Casual punctuation. Uses dashes for asides, minimal formality.
+- NEVER use em dashes (—). Use regular dashes (-) or commas instead.
+- Never sarcastic, overly formal, detached, or flowery.
+- No corporate speak. No buzzwords. No filler phrases like 'in terms of' or 'at the end of the day'.
+- Sounds like a real person talking to people he cares about.
 
-Write a warm, engaging monthly life update for the audience described below. Write in first person as ${userName}. Aim for 150-250 words across 2-3 paragraphs. End with a line that invites connection (e.g. "Would love to hear what you've been up to" or "Let me know when you're free for a call").
+AUDIENCE ADAPTATION:
+- Family: Warmest tone, more personal details, can be more vulnerable. Like updating parents/siblings on life.
+- Friends in SA: Casual, fun, inside jokes welcome, South African references fine. Like a voice note to mates.
+- Colleagues: Still warm and personal but slightly more polished. Professional but never stiff. Like a friendly update to people you respect.
+
+The summary should read like Francois actually wrote it, not like an AI generated it. Keep it natural and conversational.`
+
+    const userPrompt = `Write a warm, engaging monthly life update for the audience described below. Write in first person as Francois. Aim for 150-250 words across 2-3 paragraphs. End with a line that invites connection (e.g. "Would love to hear what you've been up to" or "Let me know when you're free for a call").
 
 NEWSLETTER MONTH: ${month}
 
 AUDIENCE: "${audience.name}"
-TONE: ${toneGuide}
+TONE GUIDANCE: ${toneGuide}
 
-${voiceInput ? `USER'S RAW INPUT FOR THIS MONTH (mirror this voice exactly):\n${voiceInput}` : ""}
+${voiceInput ? `FRANCOIS'S RAW INPUT FOR THIS MONTH (mirror this voice exactly - his slang, rhythm, energy):\n${voiceInput}` : ""}
 
 ${prevSummary ? `PREVIOUS DRAFT (improve and refine this):\n${prevSummary}` : ""}
 
 ${photoContextBlock}
 
+${radarBlock}
+
+${comingUpBlock}
+
 Rules:
-- Mirror the user's exact voice, slang, and sentence style from their raw input
+- Mirror Francois's exact voice, slang, and sentence style from his raw input
 - Match the tone to the audience description
-- Only reference events or details mentioned in the user's notes or visible in the photos -- do not invent details
-- Write the newsletter body only -- no subject line, no "Dear [name]", no "Best regards"
+- Only reference events or details mentioned in his notes or visible in the photos - do not invent details
+- Write the newsletter body only - no subject line, no "Dear [name]", no "Best regards"
 - Be authentic and personal, not corporate
-- Never use em dashes (use commas, periods, or short sentences instead)`
+- NEVER use em dashes (—) - use regular dashes (-) or commas instead`
 
     // ── Call Claude ───────────────────────────────────────────
     console.log("Calling Claude for summary generation...")
@@ -241,7 +283,8 @@ Rules:
       body: JSON.stringify({
         model:      "claude-sonnet-4-6",
         max_tokens: 1024,
-        messages:   [{ role: "user", content: prompt }],
+        system:     systemPrompt,
+        messages:   [{ role: "user", content: userPrompt }],
       }),
     })
 
@@ -252,7 +295,8 @@ Rules:
     }
 
     const anthropicData    = await anthropicRes.json()
-    const generatedSummary: string = anthropicData.content?.[0]?.text?.trim() || ""
+    // Strip any em dashes the model may have slipped in
+    const generatedSummary: string = (anthropicData.content?.[0]?.text?.trim() || "").replace(/—/g, "-")
 
     if (!generatedSummary) {
       console.error("Empty Anthropic response:", JSON.stringify(anthropicData))

@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import Navbar from '../components/Navbar'
 import ConnectGoogle from '../components/ConnectGoogle'
+import ConnectSpotify from '../components/ConnectSpotify'
 import { STATUS_STYLES } from '../lib/constants'
 
 function formatMonth(iso) {
@@ -26,6 +27,7 @@ export default function DashboardPage() {
   const [memberCounts, setMemberCounts]   = useState({})
   const [googleConnected,     setGoogleConnected]     = useState(false)
   const [googlePhotosEnabled, setGooglePhotosEnabled] = useState(false)
+  const [spotifyConnected,    setSpotifyConnected]    = useState(false)
   const [toastMsg, setToastMsg]                       = useState(null)
 
   useEffect(() => {
@@ -341,6 +343,18 @@ export default function DashboardPage() {
               }}
               forceConnected={googleConnected || undefined}
               forcePhotosEnabled={googlePhotosEnabled || undefined}
+            />
+          </div>
+          <div className="bg-white border border-cream-300 rounded-xl p-5 flex items-center justify-between gap-4 flex-wrap">
+            <div>
+              <p className="font-semibold text-warm-gray-800">Spotify</p>
+              <p className="text-sm text-warm-gray-400 mt-0.5">
+                Show your top tracks and artists in each monthly update.
+              </p>
+            </div>
+            <ConnectSpotify
+              onStatusChange={(connected) => setSpotifyConnected(connected)}
+              forceConnected={spotifyConnected || undefined}
             />
           </div>
         </section>

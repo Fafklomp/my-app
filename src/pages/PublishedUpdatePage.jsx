@@ -6,6 +6,19 @@ import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import Lightbox from '../components/Lightbox'
+import SpotifyMonthlyMusic from '../components/SpotifyMonthlyMusic'
+
+function SpotifyPublishedSection({ month, userId }) {
+  return (
+    <>
+      <Divider />
+      <h2 className="font-heading text-xl font-semibold text-warm-gray-900 text-center mb-6">
+        What I've Been Listening To
+      </h2>
+      <SpotifyMonthlyMusic month={month} userId={userId} readOnly />
+    </>
+  )
+}
 
 function formatMonth(iso) {
   if (!iso) return ''
@@ -61,7 +74,7 @@ export default function PublishedUpdatePage() {
     if (session) {
       const { data: nl } = await supabase
         .from('newsletters')
-        .select('id, period_start, user_id')
+        .select('id, period_start, user_id, manual_content, coming_up_next')
         .eq('id', vData.newsletter_id)
         .single()
 
@@ -70,10 +83,10 @@ export default function PublishedUpdatePage() {
         setNewsletter(nl)
       }
     } else {
-      // Unauthenticated — still need the newsletter for the date
+      // Unauthenticated — still need the newsletter for the date and owner id
       const { data: nl } = await supabase
         .from('newsletters')
-        .select('id, period_start')
+        .select('id, period_start, user_id, manual_content, coming_up_next')
         .eq('id', vData.newsletter_id)
         .single()
       if (nl) setNewsletter(nl)
@@ -156,9 +169,10 @@ export default function PublishedUpdatePage() {
     )
   }
 
-  const monthYear  = newsletter ? formatMonth(newsletter.period_start) : ''
-  const pullQuote  = firstSentence(version?.summary)
-  const hasPhotos  = photos.length > 0
+  const monthYear    = newsletter ? formatMonth(newsletter.period_start) : ''
+  const spotifyMonth = newsletter?.period_start?.slice(0, 7) ?? null
+  const pullQuote    = firstSentence(version?.summary)
+  const hasPhotos    = photos.length > 0
   // events and links are placeholders — hide if empty (no data source yet)
   const events     = []
   const links      = []
@@ -248,6 +262,11 @@ export default function PublishedUpdatePage() {
           </>
         )}
 
+        {/* ── Spotify: What I've Been Listening To ── */}
+        {spotifyMonth && newsletter?.user_id && (
+          <SpotifyPublishedSection month={spotifyMonth} userId={newsletter.user_id} />
+        )}
+
         {/* ── Full summary ── */}
         {version?.summary && (
           <>
@@ -259,6 +278,73 @@ export default function PublishedUpdatePage() {
             </div>
           </>
         )}
+
+        {/* ── What's On My Radar ── */}
+        {(() => {
+          const mc = newsletter?.manual_content ?? {}
+          const items = [
+            { key: 'reading',        emoji: '📚', label: 'Reading',        data: mc.reading },
+            { key: 'watching',       emoji: '🎬', label: 'Watching',       data: mc.watching },
+            { key: 'recommendation', emoji: '💡', label: 'Recommendation', data: mc.recommendation },
+            { key: 'hot_take',       emoji: '🔥', label: 'Hot Take',       data: mc.hot_take },
+          ].filter(item => item.data?.title)
+
+          if (items.length === 0) return null
+
+          return (
+            <>
+              <Divider />
+              <h2 className="font-heading text-xl font-semibold text-warm-gray-900 text-center mb-6">
+                What's On My Radar
+              </h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {items.map(item => (
+                  <div key={item.key} className="bg-white border border-cream-200 rounded-xl p-4 space-y-1">
+                    <p className="text-xs font-medium uppercase tracking-wide text-warm-gray-400">
+                      {item.emoji} {item.label}
+                    </p>
+                    <p className="font-medium text-warm-gray-800 text-sm">{item.data.title}</p>
+                    {item.data.note && (
+                      <p className="text-sm text-warm-gray-500">{item.data.note}</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </>
+          )
+        })()}
+
+        {/* ── Coming Up ── */}
+        {(() => {
+          const included = (newsletter?.coming_up_next ?? []).filter(item => item.included && item.title)
+          if (included.length === 0) return null
+
+          return (
+            <>
+              <Divider />
+              <h2 className="font-heading text-xl font-semibold text-warm-gray-900 text-center mb-6">
+                Coming Up
+              </h2>
+              <div className="space-y-3">
+                {included.map((item, i) => {
+                  const [year, month, day] = item.date.split('-').map(Number)
+                  const d = new Date(year, month - 1, day)
+                  const monthStr = d.toLocaleDateString('en-US', { month: 'short' })
+                  const dayNum   = d.getDate()
+                  return (
+                    <div key={i} className="flex items-center gap-4 bg-white border border-cream-200 rounded-xl px-4 py-3">
+                      <div className="shrink-0 w-10 text-center">
+                        <p className="text-xs font-semibold text-terra-500 uppercase leading-none">{monthStr}</p>
+                        <p className="text-xl font-bold text-warm-gray-800 leading-tight">{dayNum}</p>
+                      </div>
+                      <p className="font-medium text-warm-gray-800 text-sm">{item.title}</p>
+                    </div>
+                  )
+                })}
+              </div>
+            </>
+          )
+        })()}
 
         {/* ── Events ── */}
         {events.length > 0 && (
