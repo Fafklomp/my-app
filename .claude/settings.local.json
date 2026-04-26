@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm create:*)",
+      "Bash(cp -r /c/Users/franc/repos/my-app-temp/. /c/Users/franc/repos/my-app/)",
+      "Bash(rm -rf /c/Users/franc/repos/my-app-temp)",
+      "Bash(npm install:*)",
+      "Bash(npm run:*)",
+      "Bash(npx supabase:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(find /c/Users/franc/repos/my-app -name .env* -type f2)",
+      "Bash(find /c/Users/franc/repos/my-app/src -type f -name *.jsx -o -name *.js)",
+      "Bash(grep -r \"CLIENT_ID\\\\|CLIENT_SECRET\\\\|API_KEY\\\\|api_key\\\\|VITE_\" /c/Users/franc/repos/my-app --include=*.jsx --include=*.js --include=*.md)",
+      "Bash(tree -L 2 /c/Users/franc/repos/my-app --ignore node_modules -a)",
+      "Bash(npx vite:*)",
+      "WebFetch(domain:developers.google.com)",
+      "WebSearch",
+      "Bash(git push:*)"
+    ]
+  }
+}
