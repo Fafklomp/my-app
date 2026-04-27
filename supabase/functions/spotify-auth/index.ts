@@ -31,24 +31,27 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 
 const SPOTIFY_CLIENT_ID     = Deno.env.get("SPOTIFY_CLIENT_ID")!
 const SPOTIFY_CLIENT_SECRET = Deno.env.get("SPOTIFY_CLIENT_SECRET")!
-const REDIRECT_URI          = "http://127.0.0.1:5173/callbacks/spotify"
+const REDIRECT_URI          = Deno.env.get("SPOTIFY_REDIRECT_URI")!
 const SUPABASE_URL              = Deno.env.get("SUPABASE_URL")!
 const SUPABASE_ANON_KEY         = Deno.env.get("SUPABASE_ANON_KEY")!
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
 
 const SPOTIFY_SCOPE = "user-top-read"
 
-const CORS_HEADERS = {
-  "Access-Control-Allow-Origin":  "http://localhost:5173",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-}
+const ALLOWED_ORIGINS = new Set([
+  "http://127.0.0.1:5173",
+  "http://localhost:5173",
+  "https://life-pulse-web.pages.dev",
+  "https://fafklomp.dev",
+])
 
-function json(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
-  })
+function corsHeaders(origin: string | null) {
+  const allowed = origin && ALLOWED_ORIGINS.has(origin) ? origin : "https://fafklomp.dev"
+  return {
+    "Access-Control-Allow-Origin":  allowed,
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  }
 }
 
 function basicAuth() {
@@ -88,7 +91,14 @@ async function refreshSpotifyToken(db: ReturnType<typeof createClient>, userId: 
 }
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: CORS_HEADERS })
+  const cors = corsHeaders(req.headers.get("Origin"))
+  function json(body: unknown, status = 200) {
+    return new Response(JSON.stringify(body), {
+      status,
+      headers: { ...cors, "Content-Type": "application/json" },
+    })
+  }
+  if (req.method === "OPTIONS") return new Response("ok", { headers: cors })
 
   try {
     // ── Auth ──────────────────────────────────────────────────
