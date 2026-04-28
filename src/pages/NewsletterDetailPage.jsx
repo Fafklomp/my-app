@@ -66,6 +66,7 @@ export default function NewsletterDetailPage() {
   // Content cards
   const [manualContent, setManualContent]           = useState({})
   const [extractionResult, setExtractionResult]     = useState(null)
+  const [extractionError, setExtractionError]       = useState(null)
   const [comingUpNext, setComingUpNext]             = useState([])
   // Send flow
   const [memberCounts, setMemberCounts]             = useState({})
@@ -328,13 +329,40 @@ export default function NewsletterDetailPage() {
 
   // ── Extract content from voice/text note ──
   async function handleExtract(text) {
+    setExtractionError(null)
+    console.log('[extract-content] sending transcript (%d chars):', text.length, text)
+
     const { data, error } = await supabase.functions.invoke('extract-content', {
       body: { transcript: text },
     })
-    if (error || data?.error) {
-      console.error('extract-content error:', error || data?.error)
+
+    console.log('[extract-content] raw data:', data)
+    console.log('[extract-content] raw error:', error)
+
+    if (error) {
+      let detail = error.message ?? 'Unknown error'
+      try {
+        const cloned = error.context?.clone?.()
+        if (cloned) { const t = await cloned.text(); detail = t || detail }
+      } catch { /* ignore */ }
+      console.error('[extract-content] invocation error:', detail)
+      setExtractionError(`Extraction failed: ${detail}`)
       return
     }
+
+    if (data?.error) {
+      console.error('[extract-content] function returned error:', data.error, data.detail ?? '')
+      setExtractionError(`Extraction failed: ${data.error}${data.detail ? ` — ${data.detail}` : ''}`)
+      return
+    }
+
+    console.log('[extract-content] success:', {
+      reading: data?.reading,
+      watching: data?.watching,
+      recommendation: data?.recommendation,
+      hot_take: data?.hot_take,
+      coming_up: data?.coming_up,
+    })
     setExtractionResult(data)
   }
 
@@ -608,6 +636,14 @@ export default function NewsletterDetailPage() {
           <div className="bg-red-50 border border-red-200 rounded-xl px-5 py-3 flex items-center justify-between gap-4">
             <p className="text-sm text-red-600">{regenError}</p>
             <button onClick={() => setRegenError(null)} className="text-red-400 hover:text-red-600 text-lg leading-none cursor-pointer shrink-0">×</button>
+          </div>
+        )}
+
+        {/* ── Extraction error banner ── */}
+        {extractionError && (
+          <div className="bg-red-50 border border-red-200 rounded-xl px-5 py-3 flex items-center justify-between gap-4">
+            <p className="text-sm text-red-600">{extractionError}</p>
+            <button onClick={() => setExtractionError(null)} className="text-red-400 hover:text-red-600 text-lg leading-none cursor-pointer shrink-0">×</button>
           </div>
         )}
 

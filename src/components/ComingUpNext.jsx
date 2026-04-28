@@ -2,9 +2,21 @@ import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
 
 const EXCLUDE_PATTERNS = [
-  /\bsection\b/i, /\bclass\b/i, /\blecture\b/i, /office\s+hours/i, /\boh:/i, /\brecitation\b/i,
-  /\bdentist\b/i, /\bdoctor\b/i, /\btherapy\b/i, /\bgym\b/i, /\byoga\b/i,
-  /stand-?up/i, /\b1:1\b/i, /\bsync\b/i, /check-?in/i,
+  // Academic / class sessions (including HBS-style codes like "TEM H", "DSAIL H", "FIN2 H")
+  /\bsection\b/i, /\bsecton\b/i, /\bclass\b/i, /\blecture\b/i,
+  /office\s+hours/i, /\boh:/i, /\brecitation\b/i,
+  // Matches short course codes ending in a single capital letter or "H" e.g. "TEM H", "FIN2 H"
+  /\b[A-Z][A-Z0-9]{1,6}\s+[A-Z]\b/,
+
+  // Health / personal routine
+  /\bdentist\b/i, /\bdoctor\b/i, /\btherapy\b/i, /\bgym\b/i, /\byoga\b/i, /\bhaircut\b/i,
+
+  // Work routine
+  /stand-?up/i, /\bstandup\b/i, /\b1:1\b/i, /\bsync\b/i, /check-?in/i,
+  /weekly\s+call/i,
+
+  // Cancelled / blocked
+  /^cancelled?\b/i, /^canceled?\b/i, /\bblocker\b/i,
 ]
 
 function shouldExclude(title) {
@@ -79,13 +91,20 @@ export default function ComingUpNext({ newsletterId, newsletterMonth, initialDat
 
   async function autoPopulate() {
     const nextMonth = nextMonthStr(newsletterMonth)
+    console.log('[ComingUpNext] autoPopulate | newsletterMonth:', newsletterMonth, '→ querying month_year:', nextMonth)
+
     const { data: events } = await supabase
       .from('calendar_events')
       .select('id, title, start_time')
       .eq('month_year', nextMonth)
       .order('start_time', { ascending: true })
 
+    console.log('[ComingUpNext] raw events from DB (%d):', events?.length ?? 0, events?.map(e => `${e.title} [${e.start_time?.slice(0,10)}]`))
+
     if (!events || events.length === 0) return
+
+    const excluded = events.filter(e => shouldExclude(e.title))
+    console.log('[ComingUpNext] excluded (%d):', excluded.length, excluded.map(e => e.title))
 
     const filtered = events
       .filter(e => !shouldExclude(e.title))
@@ -96,6 +115,8 @@ export default function ComingUpNext({ newsletterId, newsletterMonth, initialDat
         included: true,
         source:   'calendar',
       }))
+
+    console.log('[ComingUpNext] included after filter (%d):', filtered.length, filtered.map(e => e.title))
 
     if (filtered.length === 0) return
     hasAutoPopulated.current = true
