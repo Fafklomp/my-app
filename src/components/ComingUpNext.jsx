@@ -39,7 +39,7 @@ function formatDateParts(dateStr) {
 
 export { formatDateParts }
 
-export default function ComingUpNext({ newsletterId, newsletterMonth, initialData, extractedItems, onUpdate }) {
+export default function ComingUpNext({ newsletterId, newsletterMonth, initialData, extractedItems, onUpdate, onClear }) {
   const [items, setItems]           = useState(initialData ?? [])
   const [addingItem, setAddingItem] = useState(false)
   const [newTitle, setNewTitle]     = useState('')
@@ -133,11 +133,24 @@ export default function ComingUpNext({ newsletterId, newsletterMonth, initialDat
     setAddingItem(false)
   }
 
+  function handleClear() {
+    if (!window.confirm('Clear Coming Up Next items?')) return
+    setItems([])
+    hasAutoPopulated.current = false
+    onClear?.()
+    autoPopulate()
+  }
+
   return (
     <div className="bg-cream-100 rounded-lg p-4 space-y-3">
-      <p className="text-xs font-medium uppercase tracking-wide text-warm-gray-400">
-        📅 Coming Up Next Month
-      </p>
+      <div className="flex items-center justify-between">
+        <p className="text-xs font-medium uppercase tracking-wide text-warm-gray-400">
+          📅 Coming Up Next Month
+        </p>
+        {items.length > 0 && (
+          <button onClick={handleClear} className="text-sm text-warm-gray-400 hover:text-terra-500 transition-colors cursor-pointer">Clear</button>
+        )}
+      </div>
 
       {items.length === 0 && !addingItem && (
         <p className="text-sm text-warm-gray-300 italic">No events found for next month.</p>

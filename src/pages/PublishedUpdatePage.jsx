@@ -207,44 +207,6 @@ export default function PublishedUpdatePage() {
           )}
         </div>
 
-        {/* ── Photos ── */}
-        {hasPhotos && (
-          <>
-            <Divider />
-            <p className="text-terra-500 text-xs font-semibold tracking-widest uppercase text-center mb-6">
-              Highlights
-            </p>
-            <div className="grid grid-cols-3 gap-4">
-              {photos.map((photo, i) => (
-                <div key={photo.id}>
-                  <div
-                    className="rounded-xl overflow-hidden shadow-sm cursor-zoom-in"
-                    onClick={() => setLightboxIndex(i)}
-                  >
-                    <img
-                      src={photo.displayUrl}
-                      alt={photo.caption ?? ''}
-                      className="w-full object-cover aspect-[4/3]"
-                    />
-                  </div>
-                  {photo.caption && (
-                    <p className="text-warm-gray-600 text-sm mt-2">{photo.caption}</p>
-                  )}
-                </div>
-              ))}
-            </div>
-
-            {lightboxIndex !== null && (
-              <Lightbox
-                photos={photos.map((p) => ({ displayUrl: p.displayUrl, caption: p.caption }))}
-                index={lightboxIndex}
-                onIndex={setLightboxIndex}
-                onClose={() => setLightboxIndex(null)}
-              />
-            )}
-          </>
-        )}
-
         {/* ── Full summary ── */}
         {version?.summary && (
           <>
@@ -323,6 +285,43 @@ export default function PublishedUpdatePage() {
             </>
           )
         })()}
+
+        {/* ── Photos ── */}
+        {hasPhotos && (
+          <>
+            <Divider />
+            <p className="text-terra-500 text-xs font-semibold tracking-widest uppercase text-center mb-6">
+              Highlights
+            </p>
+            <div className="grid grid-cols-3 gap-4">
+              {photos.map((photo, i) => (
+                <div key={photo.id}>
+                  <div
+                    className="rounded-xl overflow-hidden shadow-sm cursor-zoom-in"
+                    onClick={() => setLightboxIndex(i)}
+                  >
+                    <img
+                      src={photo.displayUrl}
+                      alt={photo.caption ?? ''}
+                      className="w-full object-cover aspect-[4/3]"
+                    />
+                  </div>
+                  {photo.caption && (
+                    <p className="text-warm-gray-600 text-sm mt-2">{photo.caption}</p>
+                  )}
+                </div>
+              ))}
+            </div>
+            {lightboxIndex !== null && (
+              <Lightbox
+                photos={photos.map((p) => ({ displayUrl: p.displayUrl, caption: p.caption }))}
+                index={lightboxIndex}
+                onIndex={setLightboxIndex}
+                onClose={() => setLightboxIndex(null)}
+              />
+            )}
+          </>
+        )}
 
         {/* ── Availability CTA ── */}
         <div className="mt-12 text-center space-y-2">

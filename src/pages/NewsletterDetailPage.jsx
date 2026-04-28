@@ -23,6 +23,15 @@ function formatMonth(iso) {
   return new Date(iso).toLocaleDateString(undefined, { month: 'long', year: 'numeric' })
 }
 
+function prevYM(ym) {
+  const [y, m] = ym.split('-').map(Number)
+  return m === 1 ? `${y - 1}-12` : `${y}-${String(m - 1).padStart(2, '0')}`
+}
+function nextYM(ym) {
+  const [y, m] = ym.split('-').map(Number)
+  return m === 12 ? `${y + 1}-01` : `${y}-${String(m + 1).padStart(2, '0')}`
+}
+
 export default function NewsletterDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -296,20 +305,23 @@ export default function NewsletterDetailPage() {
     setCalendarEvents(data ?? [])
   }
 
-  // ── Sync calendar from Google ──
+  // ── Sync calendar from Google — fetches current AND next month ──
   async function handleSyncCalendar() {
     if (!newsletter) return
     setSyncingCalendar(true)
     const date = new Date(newsletter.period_start)
-    const { data, error } = await supabase.functions.invoke('fetch-calendar-events', {
-      body: { month: date.getUTCMonth() + 1, year: date.getUTCFullYear() },
-    })
-    if (!error && !data?.error) {
+    const cm = date.getUTCMonth() + 1
+    const cy = date.getUTCFullYear()
+    const nm = cm === 12 ? 1  : cm + 1
+    const ny = cm === 12 ? cy + 1 : cy
+    const [r1, r2] = await Promise.all([
+      supabase.functions.invoke('fetch-calendar-events', { body: { month: cm, year: cy } }),
+      supabase.functions.invoke('fetch-calendar-events', { body: { month: nm, year: ny } }),
+    ])
+    if (!r1.error && !r2.error) {
       await loadCalendarEvents()
     } else {
-      let errorBody = {}
-      try { errorBody = await error?.context?.json() } catch { /* no-op */ }
-      console.error('Calendar sync error:', errorBody || data?.error || error?.message)
+      console.error('Calendar sync error:', r1.error?.message ?? r2.error?.message)
     }
     setSyncingCalendar(false)
   }
@@ -436,6 +448,55 @@ export default function NewsletterDetailPage() {
     setResetting(false)
   }
 
+  // ── Navigate to another month (find or create newsletter) ──
+  async function navigateToMonth(ym) {
+    const [y, m] = ym.split('-').map(Number)
+    const startOfMonth = `${ym}-01`
+    const startOfNext  = m === 12 ? `${y + 1}-01-01` : `${y}-${String(m + 1).padStart(2, '0')}-01`
+    const { data: existing } = await supabase
+      .from('newsletters')
+      .select('id')
+      .eq('user_id', user.id)
+      .gte('period_start', startOfMonth)
+      .lt('period_start', startOfNext)
+      .limit(1)
+      .maybeSingle()
+    if (existing) { navigate(`/newsletters/${existing.id}`); return }
+    const lastDay = new Date(y, m, 0).getDate()
+    const label   = new Date(y, m - 1, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+    const { data: created } = await supabase
+      .from('newsletters')
+      .insert({ user_id: user.id, title: `${label} Update`, cadence: 'monthly',
+                period_start: startOfMonth, period_end: `${ym}-${String(lastDay).padStart(2, '0')}`, status: 'draft' })
+      .select('id')
+      .single()
+    if (created) navigate(`/newsletters/${created.id}`)
+  }
+
+  // ── Per-section clear ──
+  async function handleClearSummary(versionId) {
+    if (!window.confirm('Clear this summary?')) return
+    await supabase.from('newsletter_versions').update({ summary: '' }).eq('id', versionId)
+    setVersions(prev => prev.map(v => v.id === versionId ? { ...v, summary: '' } : v))
+    setEditingId(null)
+  }
+
+  async function handleClearRadar() {
+    if (!window.confirm("Clear What's On My Radar?")) return
+    await supabase.from('newsletters').update({ manual_content: {} }).eq('id', id)
+    setManualContent({})
+  }
+
+  async function handleClearPhotos(versionId) {
+    if (!window.confirm('Remove all photos from this draft?')) return
+    const { data: photoRows } = await supabase
+      .from('newsletter_photos').select('storage_path').eq('newsletter_version_id', versionId)
+    const paths = (photoRows ?? []).map(p => p.storage_path).filter(Boolean)
+    if (paths.length > 0) await supabase.storage.from(BUCKET).remove(paths)
+    await supabase.from('newsletter_photos').delete().eq('newsletter_version_id', versionId)
+    refreshAllPhotos()
+  }
+
   if (!user || !newsletter) return null
 
   const badge = STATUS_STYLES[newsletter.status] ?? STATUS_STYLES.draft
@@ -456,9 +517,21 @@ export default function NewsletterDetailPage() {
           <div className="flex items-start justify-between gap-4 mt-3 flex-wrap">
             <div>
               <div className="flex items-center gap-3 flex-wrap">
-                <h1 className="font-heading font-bold text-3xl text-warm-gray-900">
-                  {formatMonth(newsletter.period_start)}
-                </h1>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => navigateToMonth(prevYM(newsletter.period_start.slice(0, 7)))}
+                    className="text-warm-gray-300 hover:text-terra-500 transition-colors cursor-pointer w-8 h-8 flex items-center justify-center rounded-lg hover:bg-cream-200 text-xl"
+                    title="Previous month"
+                  >‹</button>
+                  <h1 className="font-heading font-bold text-3xl text-warm-gray-900">
+                    {formatMonth(newsletter.period_start)}
+                  </h1>
+                  <button
+                    onClick={() => navigateToMonth(nextYM(newsletter.period_start.slice(0, 7)))}
+                    className="text-warm-gray-300 hover:text-terra-500 transition-colors cursor-pointer w-8 h-8 flex items-center justify-center rounded-lg hover:bg-cream-200 text-xl"
+                    title="Next month"
+                  >›</button>
+                </div>
                 <span className={badge.className}>{badge.label}</span>
               </div>
               <p className="text-warm-gray-400 text-sm mt-1">
@@ -516,7 +589,7 @@ export default function NewsletterDetailPage() {
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
                     </svg>
                   )}
-                  {regenerating ? 'Generating…' : 'Regenerate Summary'}
+                  {regenerating ? 'Generating…' : 'Generate Summary'}
                 </button>
               )}
               <button
@@ -566,7 +639,10 @@ export default function NewsletterDetailPage() {
         {/* ── What's On My Radar ── */}
         {(newsletter.voice_input || Object.values(manualContent).some(v => v?.title) || extractionResult) && (
           <div>
-            <h2 className="font-heading font-semibold text-warm-gray-800 mb-3">What's On My Radar</h2>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="font-heading font-semibold text-warm-gray-800">What's On My Radar</h2>
+              <button onClick={handleClearRadar} className="text-sm text-warm-gray-400 hover:text-terra-500 transition-colors cursor-pointer">Clear</button>
+            </div>
             <ContentCards
               newsletterId={id}
               initialData={manualContent}
@@ -583,6 +659,7 @@ export default function NewsletterDetailPage() {
           initialData={comingUpNext}
           extractedItems={extractionResult}
           onUpdate={(next) => setComingUpNext(next)}
+          onClear={() => setComingUpNext([])}
         />
 
         {/* ── Audience tabs ── */}
@@ -720,14 +797,24 @@ export default function NewsletterDetailPage() {
                 <div className="bg-white border border-cream-300 rounded-xl shadow-sm overflow-hidden">
                   <div className="px-6 py-4 border-b border-cream-300 flex items-center justify-between gap-3">
                     <h2 className="font-heading font-semibold text-warm-gray-800">Summary</h2>
-                    {version && editingId !== version.id && (
-                      <button
-                        onClick={() => { setEditingId(version.id); setEditDraft(version.summary ?? '') }}
-                        className="text-sm text-warm-gray-400 hover:text-terra-500 transition-colors cursor-pointer"
-                      >
-                        Edit
-                      </button>
-                    )}
+                    <div className="flex items-center gap-3">
+                      {version?.summary && (
+                        <button
+                          onClick={() => handleClearSummary(version.id)}
+                          className="text-sm text-warm-gray-400 hover:text-terra-500 transition-colors cursor-pointer"
+                        >
+                          Reset
+                        </button>
+                      )}
+                      {version && editingId !== version.id && (
+                        <button
+                          onClick={() => { setEditingId(version.id); setEditDraft(version.summary ?? '') }}
+                          className="text-sm text-warm-gray-400 hover:text-terra-500 transition-colors cursor-pointer"
+                        >
+                          Edit
+                        </button>
+                      )}
+                    </div>
                   </div>
                   <div className="p-6">
                     {!version ? (
@@ -783,6 +870,14 @@ export default function NewsletterDetailPage() {
                   <div className="px-6 py-4 border-b border-cream-300 flex items-center justify-between gap-3 flex-wrap">
                     <h2 className="font-heading font-semibold text-warm-gray-800">Photos</h2>
                     <div className="flex items-center gap-3 flex-wrap">
+                      {version && (
+                        <button
+                          onClick={() => handleClearPhotos(version.id)}
+                          className="text-sm text-warm-gray-400 hover:text-terra-500 transition-colors cursor-pointer"
+                        >
+                          Clear photos
+                        </button>
+                      )}
                       {version && (
                         <PhotoCurator
                           newsletterId={id}

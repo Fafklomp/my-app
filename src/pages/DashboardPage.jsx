@@ -6,14 +6,29 @@ import ConnectGoogle from '../components/ConnectGoogle'
 import ConnectSpotify from '../components/ConnectSpotify'
 import { STATUS_STYLES } from '../lib/constants'
 
-function formatMonth(iso) {
-  if (!iso) return '—'
-  return new Date(iso).toLocaleDateString(undefined, { month: 'long', year: 'numeric' })
+function todayYM() {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
 }
 
-function monthAbbr(iso) {
-  if (!iso) return '—'
-  return new Date(iso).toLocaleDateString(undefined, { month: 'short' }).toUpperCase()
+function monthGridYMs(before = 5, after = 1) {
+  const result = []
+  const now = new Date()
+  for (let i = -before; i <= after; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() + i, 1)
+    result.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`)
+  }
+  return result
+}
+
+function shortMonthLabel(ym) {
+  const [y, m] = ym.split('-').map(Number)
+  return new Date(y, m - 1, 1).toLocaleDateString('en-US', { month: 'short' }).toUpperCase()
+}
+
+function fullMonthLabel(ym) {
+  const [y, m] = ym.split('-').map(Number)
+  return new Date(y, m - 1, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
 }
 
 
@@ -29,6 +44,7 @@ export default function DashboardPage() {
   const [googlePhotosEnabled, setGooglePhotosEnabled] = useState(false)
   const [spotifyConnected,    setSpotifyConnected]    = useState(false)
   const [toastMsg, setToastMsg]                       = useState(null)
+  const [creating, setCreating]                       = useState(false)
 
   useEffect(() => {
     // onAuthStateChange fires reliably after OAuth redirects (unlike getSession which
@@ -143,11 +159,32 @@ export default function DashboardPage() {
     setLoading(false)
   }
 
+  async function handleSelectMonth(ym) {
+    const existing = newsletters.find((n) => n.period_start?.slice(0, 7) === ym)
+    if (existing) { navigate(`/newsletters/${existing.id}`); return }
+    setCreating(true)
+    const [y, m] = ym.split('-').map(Number)
+    const lastDay = new Date(y, m, 0).getDate()
+    const { data, error } = await supabase
+      .from('newsletters')
+      .insert({
+        user_id:      user.id,
+        title:        `${fullMonthLabel(ym)} Update`,
+        cadence:      'monthly',
+        period_start: `${ym}-01`,
+        period_end:   `${ym}-${String(lastDay).padStart(2, '0')}`,
+        status:       'draft',
+      })
+      .select('id')
+      .single()
+    setCreating(false)
+    if (!error && data) navigate(`/newsletters/${data.id}`)
+  }
+
   if (!user) return null
 
-  const current = newsletters[0] ?? null
-  const past    = newsletters.slice(1)
-  const badge   = current ? (STATUS_STYLES[current.status] ?? STATUS_STYLES.draft) : null
+  const thisYM    = todayYM()
+  const monthYMs  = monthGridYMs()
 
   return (
     <div className="min-h-screen bg-cream-100">
@@ -175,57 +212,44 @@ export default function DashboardPage() {
           </p>
         </section>
 
-        {/* ── Section 2: Current Newsletter Card ── */}
-        <section>
+        {/* ── Section 2: Month Timeline ── */}
+        <section className="space-y-4">
+          <h2 className="font-heading font-semibold text-xl text-warm-gray-900">
+            Monthly Updates
+          </h2>
           {loading ? (
-            <p className="text-warm-gray-400 text-sm">Loading…</p>
-          ) : !current ? (
-            <div className="bg-white border-2 border-dashed border-cream-300 rounded-2xl p-10 text-center space-y-3">
-              <p className="font-heading font-semibold text-warm-gray-800 text-lg">
-                No newsletter yet
-              </p>
-              <p className="text-sm text-warm-gray-400">
-                Create your first newsletter to get started.
-              </p>
-              <Link
-                to="/newsletters/new"
-                className="inline-block bg-terra-500 hover:bg-terra-600 text-white text-sm font-medium px-5 py-2.5 rounded-lg transition-colors mt-2"
-              >
-                + New Newsletter
-              </Link>
-            </div>
+            <p className="text-sm text-warm-gray-400">Loading…</p>
           ) : (
-            <div className="bg-white border border-cream-300 rounded-2xl shadow-sm p-6 space-y-5">
-              {/* Top row */}
-              <div className="flex items-center gap-3 flex-wrap">
-                <h2 className="font-heading font-semibold text-2xl text-warm-gray-900">
-                  {formatMonth(current.period_start)}
-                </h2>
-                <span className={badge.className}>{badge.label}</span>
-                <Link
-                  to={`/newsletters/${current.id}`}
-                  className="ml-auto bg-terra-500 hover:bg-terra-600 text-white text-sm font-medium px-5 py-2.5 rounded-lg transition-colors shrink-0"
-                >
-                  Review Draft →
-                </Link>
-              </div>
-
-              {/* Subtitle */}
-              <p className="text-sm text-warm-gray-400">
-                {badge.label} · {photoCount} photo{photoCount !== 1 ? 's' : ''} · 0 events
-              </p>
-
-              {/* Photo area */}
-              {photoCount > 0 ? (
-                <div className="flex gap-3 overflow-x-auto">
-                  {/* Thumbnails would render here when photos exist */}
-                </div>
-              ) : (
-                <div className="border-2 border-dashed border-cream-300 rounded-xl p-8 text-center text-warm-gray-400 text-sm">
-                  Photos will appear here once you connect Google Photos
-                </div>
-              )}
-
+            <div className="flex gap-3 overflow-x-auto pb-2">
+              {monthYMs.map((ym) => {
+                const nl = newsletters.find((n) => n.period_start?.slice(0, 7) === ym)
+                const isToday = ym === thisYM
+                const b = nl ? (STATUS_STYLES[nl.status] ?? STATUS_STYLES.draft) : null
+                return (
+                  <button
+                    key={ym}
+                    onClick={() => handleSelectMonth(ym)}
+                    disabled={creating}
+                    className={`shrink-0 flex flex-col items-center gap-2 rounded-xl border px-5 py-4 min-w-[88px] cursor-pointer transition-all disabled:opacity-50 ${
+                      isToday
+                        ? 'border-terra-400 bg-terra-50 shadow-sm ring-2 ring-terra-300/20'
+                        : nl
+                          ? 'border-cream-300 bg-white hover:border-terra-300 hover:shadow-sm'
+                          : 'border-dashed border-cream-300 bg-cream-50 hover:border-terra-300'
+                    }`}
+                  >
+                    <span className="text-xs font-bold text-warm-gray-600 tracking-wider">
+                      {shortMonthLabel(ym)}
+                    </span>
+                    <span className="text-xs text-warm-gray-400">{ym.slice(0, 4)}</span>
+                    {b ? (
+                      <span className={b.className}>{b.label}</span>
+                    ) : (
+                      <span className="text-xs text-warm-gray-300 italic">empty</span>
+                    )}
+                  </button>
+                )
+              })}
             </div>
           )}
         </section>
@@ -276,53 +300,6 @@ export default function DashboardPage() {
           )}
         </section>
 
-        {/* ── Section 4: Past Updates ── */}
-        <section className="space-y-4">
-          <h2 className="font-heading font-semibold text-xl text-warm-gray-900">
-            Past Updates
-          </h2>
-
-          {loading ? (
-            <p className="text-sm text-warm-gray-400">Loading…</p>
-          ) : past.length === 0 ? (
-            <p className="text-sm text-warm-gray-400">No past updates yet.</p>
-          ) : (
-            <ul className="space-y-2">
-              {past.map((n) => {
-                const b = STATUS_STYLES[n.status] ?? STATUS_STYLES.draft
-                return (
-                  <li key={n.id} className="flex items-center gap-4 bg-white border border-cream-300 rounded-xl px-5 py-4">
-                    {/* Month circle */}
-                    <div className="bg-cream-200 rounded-full w-10 h-10 flex items-center justify-center text-xs font-medium text-warm-gray-600 shrink-0">
-                      {monthAbbr(n.period_start)}
-                    </div>
-
-                    {/* Title + meta */}
-                    <div className="flex-1 min-w-0">
-                      <p className="font-heading font-semibold text-warm-gray-800 truncate">
-                        {n.title}
-                      </p>
-                      <p className="text-xs text-warm-gray-400 mt-0.5">
-                        0 photos · 0 events
-                      </p>
-                    </div>
-
-                    {/* Badge + link */}
-                    <div className="flex items-center gap-3 shrink-0">
-                      <span className={b.className}>{b.label}</span>
-                      <Link
-                        to={`/newsletters/${n.id}`}
-                        className="text-warm-gray-400 hover:text-terra-500 transition-colors"
-                      >
-                        →
-                      </Link>
-                    </div>
-                  </li>
-                )
-              })}
-            </ul>
-          )}
-        </section>
 
         {/* ── Section 5: Connected Services ── */}
         <section className="space-y-4">
