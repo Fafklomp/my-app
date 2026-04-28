@@ -84,7 +84,8 @@ serve(async (req) => {
 
     let extracted
     try {
-      extracted = JSON.parse(text)
+      const cleaned = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim()
+      extracted = JSON.parse(cleaned)
     } catch {
       console.error("Failed to parse AI response:", text)
       return json({ error: "Failed to parse AI response", detail: text }, 502)
