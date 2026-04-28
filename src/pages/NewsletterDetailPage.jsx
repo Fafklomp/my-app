@@ -9,7 +9,6 @@ import Lightbox from '../components/Lightbox'
 import ConnectGoogle from '../components/ConnectGoogle'
 import MiniCalendar from '../components/MiniCalendar'
 import PhotoCurator from '../components/PhotoCurator'
-import SpotifyMonthlyMusic from '../components/SpotifyMonthlyMusic'
 import ContentCards from '../components/ContentCards'
 import ComingUpNext from '../components/ComingUpNext'
 
@@ -565,7 +564,7 @@ export default function NewsletterDetailPage() {
         )}
 
         {/* ── What's On My Radar ── */}
-        {(newsletter.voice_input || Object.values(manualContent).some(v => v?.title)) && (
+        {(newsletter.voice_input || Object.values(manualContent).some(v => v?.title) || extractionResult) && (
           <div>
             <h2 className="font-heading font-semibold text-warm-gray-800 mb-3">What's On My Radar</h2>
             <ContentCards
@@ -582,6 +581,7 @@ export default function NewsletterDetailPage() {
           newsletterId={id}
           newsletterMonth={newsletter.period_start.slice(0, 7)}
           initialData={comingUpNext}
+          extractedItems={extractionResult}
           onUpdate={(next) => setComingUpNext(next)}
         />
 
@@ -834,19 +834,6 @@ export default function NewsletterDetailPage() {
                   </div>
                 </div>
 
-                {/* Music card */}
-                <div className="bg-white border border-cream-300 rounded-xl shadow-sm overflow-hidden">
-                  <div className="px-6 py-4 border-b border-cream-300">
-                    <h2 className="font-heading font-semibold text-warm-gray-800">What I've Been Listening To</h2>
-                  </div>
-                  <div className="p-6">
-                    <SpotifyMonthlyMusic
-                      month={newsletter.period_start.slice(0, 7)}
-                      spotifyConnected={spotifyConnected}
-                    />
-                  </div>
-                </div>
-
                 {/* Events card — mini calendar */}
                 <div className="bg-white border border-cream-300 rounded-xl shadow-sm overflow-hidden">
                   <div className="px-6 py-4 border-b border-cream-300">
@@ -861,18 +848,6 @@ export default function NewsletterDetailPage() {
                       syncing={syncingCalendar}
                       onSync={handleSyncCalendar}
                     />
-                  </div>
-                </div>
-
-                {/* Links placeholder */}
-                <div className="bg-white border border-cream-300 rounded-xl shadow-sm overflow-hidden">
-                  <div className="px-6 py-4 border-b border-cream-300">
-                    <h2 className="font-heading font-semibold text-warm-gray-800">Links &amp; Highlights</h2>
-                  </div>
-                  <div className="p-6">
-                    <div className="border-2 border-dashed border-cream-300 rounded-xl p-8 text-center text-warm-gray-400 text-sm">
-                      Shared links and highlights will appear here
-                    </div>
                   </div>
                 </div>
 

@@ -67,8 +67,8 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         model:      "claude-haiku-4-5-20251001",
-        max_tokens: 512,
-        system:     "You are extracting structured content from a personal monthly update note. Find any mentions of: books or articles being read, shows or movies being watched, recommendations (restaurants, products, apps, places, anything), and strong opinions or hot takes. Return ONLY valid JSON matching this structure: { reading: { title: string, note: string }, watching: { title: string, note: string }, recommendation: { title: string, note: string }, hot_take: { title: string, note: string } }. Use empty strings for fields not mentioned. The title should be the name of the thing, the note should be a brief comment about it extracted from context.",
+        max_tokens: 800,
+        system:     "You are extracting structured content from a personal monthly update note. Find any mentions of: books or articles being read, shows or movies being watched, recommendations (restaurants, products, apps, places, anything), strong opinions or hot takes, and upcoming plans or events mentioned for the future (trips, meetups, events, deadlines, things they're looking forward to). Return ONLY valid JSON matching this structure: { reading: { title: string, note: string }, watching: { title: string, note: string }, recommendation: { title: string, note: string }, hot_take: { title: string, note: string }, coming_up: [{ title: string, date: string }] }. Use empty strings for fields not mentioned. For coming_up, use empty string for date if no date is mentioned. The title should be the name of the thing, the note should be a brief comment about it extracted from context.",
         messages:   [{ role: "user", content: transcript }],
       }),
     })

@@ -39,20 +39,43 @@ function formatDateParts(dateStr) {
 
 export { formatDateParts }
 
-export default function ComingUpNext({ newsletterId, newsletterMonth, initialData, onUpdate }) {
-  const [items, setItems]         = useState(initialData ?? [])
+export default function ComingUpNext({ newsletterId, newsletterMonth, initialData, extractedItems, onUpdate }) {
+  const [items, setItems]           = useState(initialData ?? [])
   const [addingItem, setAddingItem] = useState(false)
-  const [newTitle, setNewTitle]   = useState('')
-  const [newDate, setNewDate]     = useState('')
+  const [newTitle, setNewTitle]     = useState('')
+  const [newDate, setNewDate]       = useState('')
   const [editingIdx, setEditingIdx] = useState(null)
   const isInitial              = useRef(true)
   const hasAutoPopulated       = useRef((initialData ?? []).length > 0)
+  const lastExtractRef         = useRef(null)
 
   // Auto-populate from next-month calendar events if no saved data yet
   useEffect(() => {
     if (hasAutoPopulated.current) return
     autoPopulate()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Merge AI-extracted coming_up items when extractedItems changes
+  useEffect(() => {
+    if (!extractedItems || extractedItems === lastExtractRef.current) return
+    lastExtractRef.current = extractedItems
+    const aiItems = extractedItems.coming_up ?? []
+    if (aiItems.length === 0) return
+
+    setItems(prev => {
+      const existingTitles = new Set(prev.map(i => i.title.toLowerCase().trim()))
+      const newItems = aiItems
+        .filter(ai => ai.title && !existingTitles.has(ai.title.toLowerCase().trim()))
+        .map(ai => ({
+          event_id: null,
+          title:    ai.title,
+          date:     ai.date || '',
+          included: true,
+          source:   'notes',
+        }))
+      return newItems.length > 0 ? [...prev, ...newItems] : prev
+    })
+  }, [extractedItems])
 
   async function autoPopulate() {
     const nextMonth = nextMonthStr(newsletterMonth)
@@ -71,7 +94,7 @@ export default function ComingUpNext({ newsletterId, newsletterMonth, initialDat
         title:    e.title,
         date:     toISODate(e.start_time),
         included: true,
-        manual:   false,
+        source:   'calendar',
       }))
 
     if (filtered.length === 0) return
@@ -103,7 +126,7 @@ export default function ComingUpNext({ newsletterId, newsletterMonth, initialDat
 
   function addManualItem() {
     if (!newTitle.trim() || !newDate) return
-    const item = { event_id: null, title: newTitle.trim(), date: newDate, included: true, manual: true }
+    const item = { event_id: null, title: newTitle.trim(), date: newDate, included: true, source: 'manual' }
     setItems(prev => [...prev, item])
     setNewTitle('')
     setNewDate('')
@@ -165,15 +188,25 @@ export default function ComingUpNext({ newsletterId, newsletterMonth, initialDat
               {/* Date */}
               <span className="text-xs text-warm-gray-400 shrink-0">{formatDate(item.date)}</span>
 
-              {/* Manual badge */}
-              {item.manual && (
+              {/* Source badge */}
+              {item.source === 'notes' && (
+                <span className="text-xs text-terra-500 bg-terra-500/10 px-1.5 py-0.5 rounded shrink-0">
+                  from notes
+                </span>
+              )}
+              {item.source === 'calendar' && (
+                <span className="text-xs text-warm-gray-400 bg-warm-gray-100 px-1.5 py-0.5 rounded shrink-0">
+                  calendar
+                </span>
+              )}
+              {(!item.source || item.source === 'manual') && (
                 <span className="text-xs text-terra-500 bg-terra-500/10 px-1.5 py-0.5 rounded shrink-0">
                   manual
                 </span>
               )}
 
-              {/* Delete (manual items only) */}
-              {item.manual && (
+              {/* Delete (non-calendar items only) */}
+              {item.source !== 'calendar' && (
                 <button
                   onClick={() => deleteItem(i)}
                   className="text-warm-gray-300 hover:text-warm-gray-600 transition-colors cursor-pointer shrink-0 text-lg leading-none"

@@ -6,19 +6,6 @@ import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import Lightbox from '../components/Lightbox'
-import SpotifyMonthlyMusic from '../components/SpotifyMonthlyMusic'
-
-function SpotifyPublishedSection({ month, userId }) {
-  return (
-    <>
-      <Divider />
-      <h2 className="font-heading text-xl font-semibold text-warm-gray-900 text-center mb-6">
-        What I've Been Listening To
-      </h2>
-      <SpotifyMonthlyMusic month={month} userId={userId} readOnly />
-    </>
-  )
-}
 
 function formatMonth(iso) {
   if (!iso) return ''
@@ -169,13 +156,9 @@ export default function PublishedUpdatePage() {
     )
   }
 
-  const monthYear    = newsletter ? formatMonth(newsletter.period_start) : ''
-  const spotifyMonth = newsletter?.period_start?.slice(0, 7) ?? null
-  const pullQuote    = firstSentence(version?.summary)
-  const hasPhotos    = photos.length > 0
-  // events and links are placeholders — hide if empty (no data source yet)
-  const events     = []
-  const links      = []
+  const monthYear  = newsletter ? formatMonth(newsletter.period_start) : ''
+  const pullQuote  = firstSentence(version?.summary)
+  const hasPhotos  = photos.length > 0
 
   return (
     <div className="min-h-screen bg-cream-100">
@@ -262,11 +245,6 @@ export default function PublishedUpdatePage() {
           </>
         )}
 
-        {/* ── Spotify: What I've Been Listening To ── */}
-        {spotifyMonth && newsletter?.user_id && (
-          <SpotifyPublishedSection month={spotifyMonth} userId={newsletter.user_id} />
-        )}
-
         {/* ── Full summary ── */}
         {version?.summary && (
           <>
@@ -345,47 +323,6 @@ export default function PublishedUpdatePage() {
             </>
           )
         })()}
-
-        {/* ── Events ── */}
-        {events.length > 0 && (
-          <>
-            <h2 className="font-heading text-xl font-semibold text-warm-gray-900 text-center mt-10 mb-5">
-              📅 What I was up to
-            </h2>
-            <div className="grid grid-cols-2 gap-3">
-              {events.map((event, i) => (
-                <div key={i} className="bg-white border border-cream-200 rounded-xl p-4">
-                  <p className="font-medium text-warm-gray-800 text-sm">{event.name}</p>
-                  <p className="text-warm-gray-400 text-xs mt-0.5">
-                    {event.date}{event.location ? ` · ${event.location}` : ''}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </>
-        )}
-
-        {/* ── Links ── */}
-        {links.length > 0 && (
-          <>
-            <h2 className="font-heading text-xl font-semibold text-warm-gray-900 text-center mt-10 mb-5">
-              🔗 Things I shared
-            </h2>
-            <div className="space-y-3">
-              {links.map((link, i) => (
-                <a
-                  key={i}
-                  href={link.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="block bg-white border border-cream-200 rounded-xl p-4 text-center hover:border-terra-400 transition-colors"
-                >
-                  <span className="text-warm-gray-800 text-sm font-medium">{link.title} →</span>
-                </a>
-              ))}
-            </div>
-          </>
-        )}
 
         {/* ── Availability CTA ── */}
         <div className="mt-12 text-center space-y-2">
