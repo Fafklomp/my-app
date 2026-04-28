@@ -16,7 +16,24 @@
       "Bash(npx vite:*)",
       "WebFetch(domain:developers.google.com)",
       "WebSearch",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(grep -rn \"TODO\\\\|FIXME\\\\|hardcoded\\\\|console\\\\.error\\\\|console\\\\.log\" C:/Users/franc/repos/my-app/src/ --include=*.jsx)",
+      "Bash(grep:*)",
+      "Bash(for f:*)",
+      "Bash(do echo:*)",
+      "Read(//c/Users/franc/repos/my-app/supabase/functions/$f/**)",
+      "Bash(sed -n '40,45p' \"C:/Users/franc/repos/my-app/supabase/functions/fetch-google-photos/index.ts\")",
+      "Bash(sed -n '143,147p' \"C:/Users/franc/repos/my-app/supabase/functions/generate-captions/index.ts\")",
+      "Bash(sed -n '119,123p' \"C:/Users/franc/repos/my-app/supabase/functions/fetch-calendar-events/index.ts\")",
+      "Bash(sed -n '80,84p' \"C:/Users/franc/repos/my-app/supabase/functions/generate-summary/index.ts\")",
+      "Bash(sed -n '28,50p' \"C:/Users/franc/repos/my-app/supabase/functions/generate-captions/index.ts\")",
+      "Bash(sed -n '25,50p' \"C:/Users/franc/repos/my-app/supabase/functions/curate-photos/index.ts\")",
+      "Bash(sed -n '21,45p' \"C:/Users/franc/repos/my-app/supabase/functions/fetch-google-photos/index.ts\")",
+      "Bash(sed -n '34,50p' \"C:/Users/franc/repos/my-app/supabase/functions/google-photos-picker/index.ts\")",
+      "Bash(sed -n '31,47p' \"C:/Users/franc/repos/my-app/supabase/functions/store-google-photo/index.ts\")",
+      "Bash(head -5 echo \"---\" grep -n \"serve\\(async\\\\|OPTIONS\\\\|CORS_HEADERS\\\\|headers: cors\" C:/Users/franc/repos/my-app/supabase/functions/google-photos-picker/index.ts)",
+      "Bash(head -5 echo \"---\" grep -n \"serve\\(async\\\\|OPTIONS\\\\|CORS_HEADERS\\\\|headers: cors\" C:/Users/franc/repos/my-app/supabase/functions/store-google-photo/index.ts)",
+      "Bash(head -5 echo \"---\" grep -n \"serve\\(async\\\\|OPTIONS\\\\|CORS_HEADERS\\\\|headers: cors\" C:/Users/franc/repos/my-app/supabase/functions/send-newsletter/index.ts)"
     ]
   }
 }

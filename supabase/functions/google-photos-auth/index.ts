@@ -27,7 +27,6 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 
 const GOOGLE_CLIENT_ID      = Deno.env.get("GOOGLE_CLIENT_ID")!
 const GOOGLE_CLIENT_SECRET  = Deno.env.get("GOOGLE_CLIENT_SECRET")!
-const REDIRECT_URI          = Deno.env.get("GOOGLE_PHOTOS_REDIRECT_URI")!
 const SUPABASE_URL              = Deno.env.get("SUPABASE_URL")!
 const SUPABASE_ANON_KEY         = Deno.env.get("SUPABASE_ANON_KEY")!
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
@@ -54,6 +53,15 @@ function corsHeaders(origin: string | null) {
 
 serve(async (req) => {
   const cors = corsHeaders(req.headers.get("Origin"))
+
+  const origin = req.headers.get("origin") || req.headers.get("referer") || "http://127.0.0.1:5173"
+  const baseUrl = origin.includes("fafklomp.dev")
+    ? "https://fafklomp.dev"
+    : origin.includes("life-pulse-web.pages.dev")
+      ? "https://life-pulse-web.pages.dev"
+      : "http://127.0.0.1:5173"
+  const redirectUri = `${baseUrl}/auth/google-photos/callback`
+
   function json(body: unknown, status = 200) {
     return new Response(JSON.stringify(body), {
       status,
@@ -80,17 +88,13 @@ serve(async (req) => {
     const { action } = body
 
     console.log(`google-photos-auth: action=${action}, user=${user.id}`)
-    console.log(`REDIRECT_URI: ${REDIRECT_URI}`)
+    console.log(`redirectUri (dynamic): ${redirectUri}`)
 
     // ── Action: get_auth_url ──────────────────────────────────
     if (action === "get_auth_url") {
-      if (!REDIRECT_URI) {
-        return json({ error: "GOOGLE_PHOTOS_REDIRECT_URI env var not set" }, 500)
-      }
-
       const params = new URLSearchParams({
         client_id:     GOOGLE_CLIENT_ID,
-        redirect_uri:  REDIRECT_URI,
+        redirect_uri:  redirectUri,
         response_type: "code",
         scope:         PHOTOS_SCOPE,
         access_type:   "offline",
@@ -100,7 +104,7 @@ serve(async (req) => {
 
       const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`
       console.log("GOOGLE_CLIENT_ID (first 30 chars):", GOOGLE_CLIENT_ID?.slice(0, 30) ?? "NOT SET")
-      console.log("REDIRECT_URI:", REDIRECT_URI ?? "NOT SET")
+      console.log("redirectUri:", redirectUri)
       console.log("Full auth URL:", authUrl)
       return json({ auth_url: authUrl })
     }
@@ -113,7 +117,7 @@ serve(async (req) => {
       console.log("=== exchange_code: starting ===")
       console.log("Has GOOGLE_CLIENT_ID:", !!GOOGLE_CLIENT_ID, "first 20:", GOOGLE_CLIENT_ID ? GOOGLE_CLIENT_ID.slice(0, 20) : "NOT SET")
       console.log("Has GOOGLE_CLIENT_SECRET:", !!GOOGLE_CLIENT_SECRET)
-      console.log("REDIRECT_URI:", REDIRECT_URI || "NOT SET")
+      console.log("redirectUri:", redirectUri)
       console.log("Code length:", code ? code.length : 0, "first 10:", code ? code.slice(0, 10) : "N/A")
 
       const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
@@ -123,7 +127,7 @@ serve(async (req) => {
           code,
           client_id:     GOOGLE_CLIENT_ID,
           client_secret: GOOGLE_CLIENT_SECRET,
-          redirect_uri:  REDIRECT_URI,
+          redirect_uri:  redirectUri,
           grant_type:    "authorization_code",
         }),
       })
