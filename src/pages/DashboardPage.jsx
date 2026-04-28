@@ -3,32 +3,28 @@ import { useNavigate, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import Navbar from '../components/Navbar'
 import ConnectGoogle from '../components/ConnectGoogle'
-import ConnectSpotify from '../components/ConnectSpotify'
 import { STATUS_STYLES } from '../lib/constants'
+
+const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
 function todayYM() {
   const d = new Date()
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
 }
 
-function monthGridYMs(before = 5, after = 1) {
-  const result = []
-  const now = new Date()
-  for (let i = -before; i <= after; i++) {
-    const d = new Date(now.getFullYear(), now.getMonth() + i, 1)
-    result.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`)
-  }
-  return result
-}
-
-function shortMonthLabel(ym) {
-  const [y, m] = ym.split('-').map(Number)
-  return new Date(y, m - 1, 1).toLocaleDateString('en-US', { month: 'short' }).toUpperCase()
-}
-
 function fullMonthLabel(ym) {
   const [y, m] = ym.split('-').map(Number)
   return new Date(y, m - 1, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+}
+
+function getYearOptions(newsletters) {
+  const currentYear = new Date().getFullYear()
+  const years = new Set([currentYear - 1, currentYear, currentYear + 1])
+  newsletters.forEach((n) => {
+    const y = parseInt(n.period_start?.slice(0, 4))
+    if (y) years.add(y)
+  })
+  return [...years].sort((a, b) => b - a)
 }
 
 
@@ -42,7 +38,7 @@ export default function DashboardPage() {
   const [memberCounts, setMemberCounts]   = useState({})
   const [googleConnected,     setGoogleConnected]     = useState(false)
   const [googlePhotosEnabled, setGooglePhotosEnabled] = useState(false)
-  const [spotifyConnected,    setSpotifyConnected]    = useState(false)
+  const [selectedYear, setSelectedYear]               = useState(new Date().getFullYear())
   const [toastMsg, setToastMsg]                       = useState(null)
   const [creating, setCreating]                       = useState(false)
 
@@ -183,8 +179,8 @@ export default function DashboardPage() {
 
   if (!user) return null
 
-  const thisYM    = todayYM()
-  const monthYMs  = monthGridYMs()
+  const thisYM      = todayYM()
+  const yearOptions = getYearOptions(newsletters)
 
   return (
     <div className="min-h-screen bg-cream-100">
@@ -212,16 +208,30 @@ export default function DashboardPage() {
           </p>
         </section>
 
-        {/* ── Section 2: Month Timeline ── */}
+        {/* ── Section 2: Annual View ── */}
         <section className="space-y-4">
-          <h2 className="font-heading font-semibold text-xl text-warm-gray-900">
-            Monthly Updates
-          </h2>
+          <div className="flex items-center justify-between">
+            <h2 className="font-heading font-semibold text-xl text-warm-gray-900">
+              Monthly Updates
+            </h2>
+            {!loading && (
+              <select
+                value={selectedYear}
+                onChange={(e) => setSelectedYear(Number(e.target.value))}
+                className="bg-white border border-cream-300 rounded-lg px-3 py-1.5 text-sm text-warm-gray-700 focus:outline-none focus:ring-2 focus:ring-terra-500/30 focus:border-terra-500 cursor-pointer"
+              >
+                {yearOptions.map((y) => (
+                  <option key={y} value={y}>{y}</option>
+                ))}
+              </select>
+            )}
+          </div>
           {loading ? (
             <p className="text-sm text-warm-gray-400">Loading…</p>
           ) : (
-            <div className="flex gap-3 overflow-x-auto pb-2">
-              {monthYMs.map((ym) => {
+            <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+              {MONTH_NAMES.map((name, idx) => {
+                const ym = `${selectedYear}-${String(idx + 1).padStart(2, '0')}`
                 const nl = newsletters.find((n) => n.period_start?.slice(0, 7) === ym)
                 const isToday = ym === thisYM
                 const b = nl ? (STATUS_STYLES[nl.status] ?? STATUS_STYLES.draft) : null
@@ -230,7 +240,7 @@ export default function DashboardPage() {
                     key={ym}
                     onClick={() => handleSelectMonth(ym)}
                     disabled={creating}
-                    className={`shrink-0 flex flex-col items-center gap-2 rounded-xl border px-5 py-4 min-w-[88px] cursor-pointer transition-all disabled:opacity-50 ${
+                    className={`flex flex-col items-center gap-1.5 rounded-xl border px-3 py-4 cursor-pointer transition-all disabled:opacity-50 ${
                       isToday
                         ? 'border-terra-400 bg-terra-50 shadow-sm ring-2 ring-terra-300/20'
                         : nl
@@ -238,10 +248,7 @@ export default function DashboardPage() {
                           : 'border-dashed border-cream-300 bg-cream-50 hover:border-terra-300'
                     }`}
                   >
-                    <span className="text-xs font-bold text-warm-gray-600 tracking-wider">
-                      {shortMonthLabel(ym)}
-                    </span>
-                    <span className="text-xs text-warm-gray-400">{ym.slice(0, 4)}</span>
+                    <span className="text-sm font-semibold text-warm-gray-700">{name}</span>
                     {b ? (
                       <span className={b.className}>{b.label}</span>
                     ) : (
@@ -320,18 +327,6 @@ export default function DashboardPage() {
               }}
               forceConnected={googleConnected || undefined}
               forcePhotosEnabled={googlePhotosEnabled || undefined}
-            />
-          </div>
-          <div className="bg-white border border-cream-300 rounded-xl p-5 flex items-center justify-between gap-4 flex-wrap">
-            <div>
-              <p className="font-semibold text-warm-gray-800">Spotify</p>
-              <p className="text-sm text-warm-gray-400 mt-0.5">
-                Show your top tracks and artists in each monthly update.
-              </p>
-            </div>
-            <ConnectSpotify
-              onStatusChange={(connected) => setSpotifyConnected(connected)}
-              forceConnected={spotifyConnected || undefined}
             />
           </div>
         </section>
