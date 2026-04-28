@@ -33,7 +33,8 @@
       "Bash(sed -n '31,47p' \"C:/Users/franc/repos/my-app/supabase/functions/store-google-photo/index.ts\")",
       "Bash(head -5 echo \"---\" grep -n \"serve\\(async\\\\|OPTIONS\\\\|CORS_HEADERS\\\\|headers: cors\" C:/Users/franc/repos/my-app/supabase/functions/google-photos-picker/index.ts)",
       "Bash(head -5 echo \"---\" grep -n \"serve\\(async\\\\|OPTIONS\\\\|CORS_HEADERS\\\\|headers: cors\" C:/Users/franc/repos/my-app/supabase/functions/store-google-photo/index.ts)",
-      "Bash(head -5 echo \"---\" grep -n \"serve\\(async\\\\|OPTIONS\\\\|CORS_HEADERS\\\\|headers: cors\" C:/Users/franc/repos/my-app/supabase/functions/send-newsletter/index.ts)"
+      "Bash(head -5 echo \"---\" grep -n \"serve\\(async\\\\|OPTIONS\\\\|CORS_HEADERS\\\\|headers: cors\" C:/Users/franc/repos/my-app/supabase/functions/send-newsletter/index.ts)",
+      "Bash(curl:*)"
     ]
   }
 }

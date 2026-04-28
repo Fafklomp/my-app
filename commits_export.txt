@@ -1,0 +1,525 @@
+================================================================================
+COMMIT: f30bc43
+Date: 2026-04-28
+Message: Replace month strip with annual grid view, remove Spotify from dashboard
+
+- Year dropdown (prev/current/next + any years with newsletters)
+- 4×3 month grid showing status badge per month for selected year
+- Removed Spotify connected services card and related state
+
+Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+
+ src/pages/DashboardPage.jsx | 79 +++++++++++++++++++++------------------------
+ 1 file changed, 37 insertions(+), 42 deletions(-)
+
+================================================================================
+COMMIT: c28ea5c
+Date: 2026-04-28
+Message: Add month navigation, fix output layout, per-section resets, calendar sync fix
+
+- Dashboard: replace current/past newsletter layout with month timeline grid (5 past + current + 1 future)
+- Dashboard: clicking empty month auto-creates newsletter for that month
+- Detail page: add ‹ › month navigation arrows in title header
+- Detail page: rename 'Regenerate Summary' to 'Generate Summary'
+- Detail page: add per-section clear/reset buttons (Summary, Radar, Coming Up, Photos)
+- Detail page: calendar sync now fetches BOTH current and next month so Coming Up has data
+- Published view: reorder sections - Summary → Radar → Coming Up → Photos
+- ComingUpNext: add Clear button that re-fetches fresh from calendar
+- Add unique index on newsletters (user_id, month) to prevent duplicates
+
+ src/components/ComingUpNext.jsx                    |  21 ++-
+ src/pages/DashboardPage.jsx                        | 187 +++++++++------------
+ src/pages/NewsletterDetailPage.jsx                 | 137 ++++++++++++---
+ src/pages/PublishedUpdatePage.jsx                  |  75 ++++-----
+ .../20260428000000_newsletters_month_unique.sql    |   6 +
+ 5 files changed, 258 insertions(+), 168 deletions(-)
+
+================================================================================
+COMMIT: fbd2c12
+Date: 2026-04-28
+Message: Remove Spotify and Links sections, fix content extraction and Coming Up Next
+
+- Remove SpotifyMonthlyMusic from draft review and published view
+- Remove Links & Highlights placeholder from draft review and published view
+- Fix ContentCards visibility: show immediately after extraction even if voice note not yet saved
+- extract-content Edge Function: also extracts coming_up items from text
+- ComingUpNext: merge AI-extracted items (tagged 'from notes') with calendar events
+- ComingUpNext: show source badges (from notes / calendar / manual) on items
+- ComingUpNext: allow delete on notes and manual items, not calendar items
+
+ src/components/ComingUpNext.jsx             | 53 +++++++++++++++++-----
+ src/pages/NewsletterDetailPage.jsx          | 29 +-----------
+ src/pages/PublishedUpdatePage.jsx           | 69 ++---------------------------
+ supabase/functions/extract-content/index.ts |  4 +-
+ 4 files changed, 50 insertions(+), 105 deletions(-)
+
+================================================================================
+COMMIT: 3db8d3c
+Date: 2026-04-28
+Message: Make Google Photos redirect_uri dynamic based on request origin
+
+- Remove static GOOGLE_PHOTOS_REDIRECT_URI env var dependency
+- Derive redirectUri per-request from Origin/Referer header
+- Maps fafklomp.dev and life-pulse-web.pages.dev to their production callbacks
+- Falls back to http://127.0.0.1:5173 for local dev
+
+ .claude/settings.local.json                    |  19 ++-
+ audit-report.md                                | 205 +++++++++++++++++++++++++
+ supabase/.temp/cli-latest                      |   2 +-
+ supabase/functions/google-photos-auth/index.ts |  24 +--
+ 4 files changed, 238 insertions(+), 12 deletions(-)
+
+================================================================================
+COMMIT: ecb8d5a
+Date: 2026-04-27
+Message: Fix CORS and Spotify redirect URI across all Edge Functions
+
+- Replace static CORS_HEADERS with dynamic origin check in all 11 Edge Functions
+  - Allowed origins: localhost:5173, 127.0.0.1:5173, fafklomp.dev, life-pulse-web.pages.dev
+  - json() helper moved inside serve() to close over per-request cors value
+- Fix spotify-auth: REDIRECT_URI was hardcoded to 127.0.0.1:5173 - now reads from SPOTIFY_REDIRECT_URI env var
+- Fix extract-content: CORS was locked to 127.0.0.1:5173 - would have blocked all production requests
+- Set SPOTIFY_REDIRECT_URI=https://fafklomp.dev/callbacks/spotify via Supabase secrets
+
+Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+
+ supabase/functions/curate-photos/index.ts         | 32 +++++++++++++-------
+ supabase/functions/extract-content/index.ts       | 32 +++++++++++++-------
+ supabase/functions/fetch-calendar-events/index.ts | 32 +++++++++++++-------
+ supabase/functions/fetch-google-photos/index.ts   | 34 +++++++++++++--------
+ supabase/functions/generate-captions/index.ts     | 34 +++++++++++++--------
+ supabase/functions/generate-summary/index.ts      | 34 +++++++++++++--------
+ supabase/functions/google-photos-auth/index.ts    | 34 +++++++++++++--------
+ supabase/functions/google-photos-picker/index.ts  | 34 +++++++++++++--------
+ supabase/functions/send-newsletter/index.ts       | 34 +++++++++++++--------
+ supabase/functions/spotify-auth/index.ts          | 36 +++++++++++++++--------
+ supabase/functions/store-google-photo/index.ts    | 34 +++++++++++++--------
+ 11 files changed, 240 insertions(+), 130 deletions(-)
+
+================================================================================
+COMMIT: 02bebdd
+Date: 2026-04-26
+Message: add production env vars
+
+
+ .env.production | 2 ++
+ 1 file changed, 2 insertions(+)
+
+================================================================================
+COMMIT: d971408
+Date: 2026-04-26
+Message: trigger rebuild
+
+
+ .claude/settings.local.json | 22 ++++++++++++++++++++++
+ supabase/.temp/cli-latest   |  2 +-
+ 2 files changed, 23 insertions(+), 1 deletion(-)
+
+================================================================================
+COMMIT: 7405448
+Date: 2026-04-26
+Message: Add Spotify integration, content cards, coming up next, voice extraction, and newsletter reset
+
+- Add Spotify OAuth flow: spotify-auth Edge Function, SpotifyCallbackPage, ConnectSpotify component, and /callbacks/spotify route
+- Add SpotifyMonthlyMusic component showing top tracks/artists; shown on per-audience tab and published update page
+- Add spotify_monthly_data table and spotify token columns on user_oauth_tokens (migrations)
+- Add ContentCards component ("What's On My Radar") with reading/watching/recommendation/hot take cards; saved as manual_content JSONB on newsletters
+- Add ComingUpNext component for listing upcoming plans with dates; saved as coming_up_next JSONB on newsletters
+- Add extract-content Edge Function to pull structured content from voice/text input; wired into VoiceRecorder via onExtract prop
+- Update VoiceRecorder to accept onExtract prop and expose "Extract content" button alongside save
+- Update PublishedUpdatePage to render Spotify section, What's On My Radar cards, and Coming Up section for recipients
+- Update generate-summary Edge Function with Francois's full voice profile system prompt and em dash stripping
+- Add newsletter reset: Reset button in action bar opens confirmation modal; clears voice input, content cards, all versions and photos (storage + DB), resets status to draft
+
+Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+
+ src/App.jsx                                        |   2 +
+ src/components/ComingUpNext.jsx                    | 231 ++++++++++++++++
+ src/components/ConnectSpotify.jsx                  | 103 ++++++++
+ src/components/ContentCards.jsx                    | 128 +++++++++
+ src/components/SpotifyMonthlyMusic.jsx             | 173 ++++++++++++
+ src/components/VoiceRecorder.jsx                   |  52 +++-
+ src/pages/DashboardPage.jsx                        |  14 +
+ src/pages/NewsletterDetailPage.jsx                 | 149 ++++++++++-
+ src/pages/PublishedUpdatePage.jsx                  |  98 ++++++-
+ src/pages/SpotifyCallbackPage.jsx                  |  99 +++++++
+ supabase/functions/extract-content/index.ts        |  89 +++++++
+ supabase/functions/generate-summary/index.ts       |  80 ++++--
+ supabase/functions/spotify-auth/index.ts           | 289 +++++++++++++++++++++
+ .../20260403000000_add_spotify_token_columns.sql   |   8 +
+ .../20260403010000_create_spotify_monthly_data.sql |  39 +++
+ ...416000000_add_manual_content_to_newsletters.sql |   2 +
+ ...416010000_add_coming_up_next_to_newsletters.sql |   2 +
+ 17 files changed, 1519 insertions(+), 39 deletions(-)
+
+================================================================================
+COMMIT: 11e6462
+Date: 2026-04-01
+Message: Wire up routing, dashboard, and newsletter detail page
+
+- App.jsx: add routes for /audiences, /availability, /update/:id,
+  /auth/google-photos/callback, and audience tab routing
+- DashboardPage: newsletter list with status filters, month grouping,
+  and quick-actions per newsletter
+- NewsletterDetailPage: full per-audience tab UI with summary editing,
+  AI regeneration, photo management, calendar events, voice input panel,
+  send modal with recipient counts and progress, send toast notification
+  Fixed googlePhotosEnabled check (was reading wrong column)
+- Navbar: updated links for new pages
+
+Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+
+ README.md                          |   18 +-
+ src/App.jsx                        |    8 +
+ src/components/Navbar.jsx          |    6 +-
+ src/pages/DashboardPage.jsx        |  436 +++++++++++-----
+ src/pages/NewsletterDetailPage.jsx | 1004 +++++++++++++++++++++++++++++-------
+ 5 files changed, 1151 insertions(+), 321 deletions(-)
+
+================================================================================
+COMMIT: 4225662
+Date: 2026-04-01
+Message: Add published newsletter view and email sending flow
+
+- PublishedUpdatePage: public web view at /update/:versionId showing full summary,
+  photo grid, and availability CTA — no auth required
+- send-newsletter Edge Function: sends a teaser email per recipient via Resend
+  with one hero photo (7-day signed URL), first ~150 chars of summary, and a
+  "Read full update" CTA linking to the published view at fafklomp.dev
+  Sends from hello@fafklomp.dev with reply_to set to sender's email
+- Migration: sent_count and send_errors columns on newsletter_versions
+
+Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+
+ src/pages/PublishedUpdatePage.jsx                  | 325 +++++++++++++++++++++
+ supabase/functions/send-newsletter/index.ts        | 260 +++++++++++++++++
+ ...00_add_sent_tracking_to_newsletter_versions.sql |   4 +
+ 3 files changed, 589 insertions(+)
+
+================================================================================
+COMMIT: 35728f9
+Date: 2026-04-01
+Message: Add Google Photos integration via Picker API
+
+- PhotoCurator: Google Photos picker UI using the new Picker API (popup flow,
+  poll until selected, confirmation grid with real thumbnails, import progress)
+- GooglePhotosCallback: OAuth callback page with useRef guard against React
+  strict-mode double-execution; uses window.location.href for reliable redirect
+- google-photos-auth Edge Function: manual OAuth flow for photospicker scope
+  (separate from Supabase's built-in OAuth which strips custom scopes)
+- google-photos-picker Edge Function: orchestrates Picker API sessions
+  (create_session, poll_session, list_items with parallel thumbnail fetching)
+- store-google-photo Edge Function: downloads photo from Picker baseUrl with
+  Bearer auth, uploads to Supabase Storage, inserts newsletter_photos row
+- Migrations: google_photos_access/refresh token columns, taken_at + camera_info
+  on newsletter_photos
+
+Note: migrated from deprecated Library API (shut down March 31 2025) to
+Picker API (photospicker.googleapis.com) with scope photospicker.mediaitems.readonly
+
+Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+
+ src/components/PhotoCurator.jsx                    | 405 +++++++++++++++++++++
+ src/pages/GooglePhotosCallback.jsx                 | 103 ++++++
+ supabase/functions/curate-photos/index.ts          | 193 ++++++++++
+ supabase/functions/fetch-google-photos/index.ts    | 230 ++++++++++++
+ supabase/functions/google-photos-auth/index.ts     | 170 +++++++++
+ supabase/functions/google-photos-picker/index.ts   | 269 ++++++++++++++
+ supabase/functions/store-google-photo/index.ts     | 222 +++++++++++
+ .../20260401010000_add_google_photos_scope.sql     |   6 +
+ ...60401020000_add_google_photos_token_columns.sql |   8 +
+ ...401030000_add_taken_at_to_newsletter_photos.sql |   7 +
+ 10 files changed, 1613 insertions(+)
+
+================================================================================
+COMMIT: a2d294d
+Date: 2026-04-01
+Message: Add voice input, AI summary/caption generation, and photo upload
+
+- VoiceRecorder: text/voice input for monthly notes, saved to newsletters.voice_input
+- PhotoUpload: drag-and-drop photo upload with caption editing, lightbox, delete
+- Lightbox: full-screen photo viewer with keyboard navigation
+- generate-summary Edge Function: calls Claude Sonnet to write per-audience newsletter
+  drafts matching the user's voice; uses photo vision context via Claude Haiku
+- generate-captions Edge Function: auto-captions uploaded photos using Claude vision
+- Storage setup: newsletter-photos bucket with RLS policies
+- Migrations: storage_path on newsletter_photos, voice_input on newsletters
+
+Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+
+ src/components/Lightbox.jsx                        |  86 ++++++
+ src/components/PhotoUpload.jsx                     | 264 +++++++++++++++++
+ src/components/VoiceRecorder.jsx                   | 316 +++++++++++++++++++++
+ supabase/functions/generate-captions/index.ts      | 255 +++++++++++++++++
+ supabase/functions/generate-summary/index.ts       | 274 ++++++++++++++++++
+ .../20260331130000_add_storage_path_to_photos.sql  |  10 +
+ .../20260331140000_fix_newsletter_photos_rls.sql   |  72 +++++
+ .../20260331150000_storage_rls_policies.sql        |  28 ++
+ ...260331160000_add_voice_input_to_newsletters.sql |   6 +
+ supabase/storage-setup.sql                         |  57 ++++
+ 10 files changed, 1368 insertions(+)
+
+================================================================================
+COMMIT: 674efa6
+Date: 2026-04-01
+Message: Add audience management, availability page, and Google Calendar integration
+
+- AudiencesPage: create/edit/delete audience lists and members
+- AvailabilityPage: weekly availability grid for scheduling call times
+- ConnectGoogle: OAuth flow for Google Calendar and Google Photos
+- MiniCalendar, EventPopover: display synced calendar events per newsletter month
+- WeeklyAvailabilityGrid: manage bookable time slots
+- calendarUtils: shared date/event helpers
+- fetch-calendar-events Edge Function: syncs Google Calendar events into DB
+- Migrations: audience_lists, audience_members, user_oauth_tokens, calendar_events, availability_days tables
+
+Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+
+ src/components/ConnectGoogle.jsx                   | 163 +++++++++
+ src/components/EventPopover.jsx                    |  75 ++++
+ src/components/MiniCalendar.jsx                    | 174 ++++++++++
+ src/components/WeeklyAvailabilityGrid.jsx          | 267 ++++++++++++++
+ src/lib/calendarUtils.js                           | 230 +++++++++++++
+ src/pages/AudiencesPage.jsx                        | 383 +++++++++++++++++++++
+ src/pages/AvailabilityPage.jsx                     | 270 +++++++++++++++
+ supabase/functions/fetch-calendar-events/index.ts  | 249 ++++++++++++++
+ .../20260331025538_add_audience_lists.sql          | 193 +++++++++++
+ .../20260331120000_add_availability_days.sql       |  34 ++
+ .../20260331170000_user_oauth_tokens.sql           |  32 ++
+ .../migrations/20260331180000_calendar_events.sql  |  34 ++
+ .../20260331190000_add_calendar_name.sql           |   2 +
+ ...331200000_hidden_events_and_public_calendar.sql |  30 ++
+ .../20260401000000_undo_hidden_events.sql          |   4 +
+ 15 files changed, 2140 insertions(+)
+
+================================================================================
+COMMIT: 373c77e
+Date: 2026-03-30
+Message: Update Navbar brand to single terracotta pill
+
+- Replaced two-part 'Life' + 'Pulse' badge with a single bg-terra-500 pill
+- Pill text is lowercase, bold, and italic: 'life pulse'
+
+Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+
+ src/components/Navbar.jsx | 5 ++---
+ 1 file changed, 2 insertions(+), 3 deletions(-)
+
+================================================================================
+COMMIT: 7c96801
+Date: 2026-03-30
+Message: Apply warm design system across all page components
+
+- STATUS_STYLES in constants.js consolidated into single className string per status
+- DashboardPage: font-heading headings, terra-500 primary button, cream-300 card borders, warm-gray filter pills, terra-500 focus rings on search input, max-w-3xl layout
+- NewNewsletterPage: font-heading heading, shared inputClass for all fields, terra-500 submit button, cream-200 cancel button, terra-500 required asterisks, card wrapped in cream-300 border
+- NewsletterDetailPage: font-heading section titles, Section component uses cream-300 borders, Edit button secondary style, Delete button danger style, Add/Remove recipient buttons use terra-500 and warm-gray tokens, recipient dividers use divide-cream-200
+
+Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+
+ src/lib/constants.js               | 12 ++----
+ src/pages/DashboardPage.jsx        | 75 ++++++++++++++++++++------------------
+ src/pages/NewNewsletterPage.jsx    | 44 ++++++++++++----------
+ src/pages/NewsletterDetailPage.jsx | 54 ++++++++++++++-------------
+ 4 files changed, 96 insertions(+), 89 deletions(-)
+
+================================================================================
+COMMIT: 5cd2d5d
+Date: 2026-03-30
+Message: Restyle Navbar with warm design tokens and updated branding
+
+- Brand mark: "Life" in Lora bold with "Pulse" in a terracotta pill badge
+- Nav links updated to Dashboard, Current Draft, Availability using warm-gray tokens
+- Active link highlighted with bg-cream-200, inactive uses text-warm-gray-600
+- Nav links centered in header; no background on the bar, subtle border-cream-300 bottom border
+- Username and sign out use text-warm-gray-400 with hover:text-warm-gray-600
+
+Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+
+ src/components/Navbar.jsx | 33 +++++++++++++++++++++------------
+ 1 file changed, 21 insertions(+), 12 deletions(-)
+
+================================================================================
+COMMIT: 991bd6e
+Date: 2026-03-30
+Message: Migrate pages from zinc tokens to warm design system tokens
+
+- Replace bg-zinc-50 with bg-cream-100 on all page wrappers
+- Replace text-zinc-900 with text-warm-gray-900 on all headings and primary text
+- DashboardPage and NewsletterDetailPage import STATUS_STYLES from lib/constants instead of defining locally
+
+Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+
+ src/pages/DashboardPage.jsx        |  69 ++++++++------
+ src/pages/LandingPage.jsx          |  10 +-
+ src/pages/NewNewsletterPage.jsx    |  12 +--
+ src/pages/NewsletterDetailPage.jsx | 187 +++++++++++++++++++------------------
+ 4 files changed, 146 insertions(+), 132 deletions(-)
+
+================================================================================
+COMMIT: 3d324d9
+Date: 2026-03-30
+Message: Add design system foundation: theme tokens, shared constants, Button component
+
+- @theme block in index.css defines cream, terracotta, sage, and warm-gray color tokens
+- Lora (heading) and Inter (body) fonts registered as --font-heading and --font-body tokens
+- Body background and text updated to use token CSS variables directly
+- src/lib/constants.js centralises STATUS_STYLES with label/bg/text shape
+- src/components/ui/Button.jsx created with primary, secondary, ghost, and danger variants
+
+Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+
+ src/components/ui/Button.jsx | 22 +++++++++++++++++++++
+ src/index.css                | 47 ++++++++++++++++++++++++++++++++++++++++++++
+ src/lib/constants.js         | 22 +++++++++++++++++++++
+ 3 files changed, 91 insertions(+)
+
+================================================================================
+COMMIT: 67624f3
+Date: 2026-03-30
+Message: Redesign landing page, navbar, and form pages
+
+- Landing page: full redesign with tagline, feature card grid, header nav, and footer
+- Navbar: sticky positioning, fixed height (h-14), truncated user name on small screens
+- New Newsletter page: form wrapped in a white card with cancel/submit side by side
+- index.html: updated title to Life Pulse, added Inter font via Google Fonts
+
+Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+
+ index.html                      |   5 +-
+ src/components/Navbar.jsx       |  16 ++---
+ src/pages/LandingPage.jsx       |  92 +++++++++++++++++++------
+ src/pages/NewNewsletterPage.jsx | 148 ++++++++++++++++++++++------------------
+ 4 files changed, 163 insertions(+), 98 deletions(-)
+
+================================================================================
+COMMIT: 5c0adbb
+Date: 2026-03-30
+Message: Add recipients table and Recipients section to newsletter detail page
+
+- New recipients table: user_id, newsletter_id (both cascade on delete), name, email
+- RLS policies for select, insert, and delete scoped to the owning user
+- Detail page fetches recipients for the newsletter on mount, ordered newest first
+- Inline add form (name + email) inserts a row and refreshes the list on success
+- Remove button deletes immediately and optimistically removes the row from local state
+
+Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+
+ src/pages/NewsletterDetailPage.jsx            | 146 ++++++++++++++++++++++----
+ supabase/migrations/002_create_recipients.sql |  23 ++++
+ 2 files changed, 148 insertions(+), 21 deletions(-)
+
+================================================================================
+COMMIT: 1b2c571
+Date: 2026-03-30
+Message: Add search and status filter to dashboard newsletter list
+
+- Search bar filters newsletters by title as you type (client-side, no extra queries)
+- Status filter buttons: All, Draft, Pending approval, Approved, Sent
+- Both filters compose — active status + search term apply simultaneously via useMemo
+- Search bar and filters only appear once newsletters have loaded and the list is non-empty
+- Separate empty state for "no results match filters" vs "no newsletters at all"
+
+Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+
+ src/pages/DashboardPage.jsx | 82 +++++++++++++++++++++++++++++----------------
+ 1 file changed, 54 insertions(+), 28 deletions(-)
+
+================================================================================
+COMMIT: 6f53963
+Date: 2026-03-30
+Message: Extract shared Navbar component used across all authenticated pages
+
+- Navbar shows Life Pulse logo, Dashboard and New Newsletter nav links, user name, and sign out
+- Active link is highlighted using useLocation to compare current path
+- Sign out handled inside Navbar directly, removing the need for each page to pass a callback
+- NewNewsletterPage updated to use Navbar in place of its inline header
+
+Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+
+ src/components/Navbar.jsx       | 65 +++++++++++++++++++++++++++++++++++++++++
+ src/pages/NewNewsletterPage.jsx | 13 ++-------
+ 2 files changed, 67 insertions(+), 11 deletions(-)
+
+================================================================================
+COMMIT: 2d15ea5
+Date: 2026-03-30
+Message: Add newsletter detail page with edit and delete actions
+
+- /newsletters/:id shows full newsletter details: title, status, cadence, period, content, dates
+- Verifies the newsletter belongs to the logged-in user; redirects to /dashboard if not found or not owned
+- Edit button links to /newsletters/:id/edit (page to be built)
+- Delete button prompts for confirmation then removes the row and redirects to /dashboard
+
+Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+
+ src/pages/NewsletterDetailPage.jsx | 137 +++++++++++++++++++++++++++++++++++++
+ 1 file changed, 137 insertions(+)
+
+================================================================================
+COMMIT: 0ddb942
+Date: 2026-03-30
+Message: Add New Newsletter form and newsletter list to dashboard
+
+- /newsletters/new page with fields for title, cadence, period start/end
+- Inserts row into newsletters table with status 'draft' and logged-in user's ID
+- Redirects to /dashboard after save; auth-gates the page
+- Dashboard now fetches and lists the user's newsletters ordered by newest first
+- Each list item shows title, date range, cadence, and colour-coded status pill
+- Empty state with prompt to create first newsletter
+
+Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+
+ src/pages/NewNewsletterPage.jsx | 153 ++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 153 insertions(+)
+
+================================================================================
+COMMIT: 92f9718
+Date: 2026-03-30
+Message: Scaffold React/Vite app with Tailwind, Supabase, and core auth pages
+
+- Initialise Vite + React project with Tailwind CSS (v4 Vite plugin) and React Router
+- Add Supabase browser client reading VITE_SUPABASE_URL / VITE_SUPABASE_PUBLISHABLE_KEY
+- Landing page (/) with GitHub OAuth sign-in; redirects to /dashboard if already authenticated
+- Dashboard page (/dashboard) auth-gated; shows welcome message and sign-out
+- Create newsletters table migration with RLS policies (select/insert/update/delete own rows)
+
+Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+
+ .gitignore                                     |   25 +
+ CLAUDE.md                                      |   54 +
+ eslint.config.js                               |   29 +
+ index.html                                     |   13 +
+ package-lock.json                              | 3474 ++++++++++++++++++++++++
+ package.json                                   |   32 +
+ public/favicon.svg                             |    1 +
+ public/icons.svg                               |   24 +
+ src/App.jsx                                    |   18 +
+ src/assets/hero.png                            |  Bin 0 -> 44919 bytes
+ src/assets/react.svg                           |    1 +
+ src/assets/vite.svg                            |    1 +
+ src/index.css                                  |    1 +
+ src/lib/supabase.js                            |    6 +
+ src/main.jsx                                   |   10 +
+ src/pages/DashboardPage.jsx                    |  133 +
+ src/pages/LandingPage.jsx                      |   85 +
+ supabase/.temp/cli-latest                      |    1 +
+ supabase/.temp/gotrue-version                  |    1 +
+ supabase/.temp/pooler-url                      |    1 +
+ supabase/.temp/postgres-version                |    1 +
+ supabase/.temp/project-ref                     |    1 +
+ supabase/.temp/rest-version                    |    1 +
+ supabase/.temp/storage-migration               |    1 +
+ supabase/.temp/storage-version                 |    1 +
+ supabase/migrations/001_create_newsletters.sql |   47 +
+ vite.config.js                                 |    7 +
+ 27 files changed, 3969 insertions(+)
+
+================================================================================
+COMMIT: 3540a96
+Date: 2026-03-30
+Message: Initial commit
+
+
+ README.md | 2 ++
+ 1 file changed, 2 insertions(+)

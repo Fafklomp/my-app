@@ -5,8 +5,11 @@ const EXCLUDE_PATTERNS = [
   // Academic / class sessions (including HBS-style codes like "TEM H", "DSAIL H", "FIN2 H")
   /\bsection\b/i, /\bsecton\b/i, /\bclass\b/i, /\blecture\b/i,
   /office\s+hours/i, /\boh:/i, /\brecitation\b/i,
-  // Matches short course codes ending in a single capital letter or "H" e.g. "TEM H", "FIN2 H"
-  /\b[A-Z][A-Z0-9]{1,6}\s+[A-Z]\b/,
+  // Course codes: 2–7 uppercase letters/numbers followed by a single uppercase letter (e.g. "TEM H", "DSAIL H", "FIN2 H")
+  /^[A-Z][A-Z0-9]{1,5}\s+[A-Z]$/,
+
+  // Training / fitness events
+  /training\s+session/i, /private\s+training/i,
 
   // Health / personal routine
   /\bdentist\b/i, /\bdoctor\b/i, /\btherapy\b/i, /\bgym\b/i, /\byoga\b/i, /\bhaircut\b/i,
@@ -52,13 +55,18 @@ function formatDateParts(dateStr) {
 export { formatDateParts }
 
 export default function ComingUpNext({ newsletterId, newsletterMonth, initialData, extractedItems, onUpdate, onClear }) {
-  const [items, setItems]           = useState(initialData ?? [])
+  // Filter previously-saved calendar items through the current exclude list on load
+  // so stale unfiltered data doesn't bypass the filter just because it was saved before
+  const filteredInitial = (initialData ?? []).filter(
+    item => item.source !== 'calendar' || !shouldExclude(item.title)
+  )
+  const [items, setItems]           = useState(filteredInitial)
   const [addingItem, setAddingItem] = useState(false)
   const [newTitle, setNewTitle]     = useState('')
   const [newDate, setNewDate]       = useState('')
   const [editingIdx, setEditingIdx] = useState(null)
   const isInitial              = useRef(true)
-  const hasAutoPopulated       = useRef((initialData ?? []).length > 0)
+  const hasAutoPopulated       = useRef(filteredInitial.length > 0)
   const lastExtractRef         = useRef(null)
 
   // Auto-populate from next-month calendar events if no saved data yet
